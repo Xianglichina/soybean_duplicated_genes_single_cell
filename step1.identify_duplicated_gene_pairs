@@ -5,6 +5,8 @@ input files (downloaded from soybean database):
 gff3 files
 protien files 
 
+the input protein files should be primary, otherwise, too many transcripts 
+
 glyma.Wm82.gnm4.ann1.T8TQ.gene_models_main.gff3.gz ----> glyma.gff3
 glyma.Wm82.gnm4.ann1.T8TQ.protein.faa.gz ---->glyma.pep
 
