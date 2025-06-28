@@ -4,3 +4,23 @@ https://github.com/qiao-xin/DupGen_finder
 input files (downloaded from soybean database): 
 gff3 files
 protien files 
+
+glyma.Wm82.gnm4.ann1.T8TQ.gene_models_main.gff3.gz ----> glyma.gff3
+glyma.Wm82.gnm4.ann1.T8TQ.protein.faa.gz ---->glyma.pep
+
+phavu.G19833.gnm2.ann1.PB8d.gene_models_main.gff3.gz ---->phavu.gff3
+phavu.G19833.gnm2.ann1.PB8d.protein.faa.gz ---->phavu.pep
+
+#1. generate the blast results # 
+ml DIAMOND/2.1.8-GCC-12.3.0
+
+diamond makedb --in glyma.pep -d glyma
+diamond blastp -d glyma -q glyma.pep -o glyma.blast -p 20 --sensitive --max-target-seqs 5 --evalue 1e-10 --quiet
+
+diamond makedb --in phavu.pep -d phavu
+diamond blastp -d phavu -q glyma.pep -o phavu.blast -p 20 --sensitive --max-target-seqs 5 --evalue 1e-10 --quiet
+
+#2. filter the blast result 
+self: similarity > 80%
+others: similarity > 70%, coverage > 70% 
+
