@@ -24,3 +24,8 @@ diamond blastp -d phavu -q glyma.pep -o phavu.blast -p 20 --sensitive --max-targ
 self: similarity > 80%
 others: similarity > 70%, coverage > 70% 
 
+#3. run DupGen_finder 
+DupGen_finder.pl -i data -t glyma -c phavu -o results
+
+
+
