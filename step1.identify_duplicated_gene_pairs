@@ -1,0 +1,6 @@
+step1. identify duplicated gene pairs using DupGen_finder
+https://github.com/qiao-xin/DupGen_finder
+
+input files (downloaded from soybean database): 
+gff3 files
+protien files 
