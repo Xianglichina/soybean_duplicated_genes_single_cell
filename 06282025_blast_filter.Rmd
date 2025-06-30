@@ -1,0 +1,64 @@
+---
+title: "blast_analysis"
+output: html_document
+date: "2024-07-12"
+---
+
+```{r load packages}
+library(tidyverse)
+library(ggplot2)
+
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+
+#BiocManager::install("Biostrings")
+
+library(Biostrings)
+```
+
+```{r load the data }
+
+glyma_ped<- readAAStringSet("glyma.Wm82.gnm4.ann1.T8TQ.protein_primary.faa")
+
+#this uses Biostrings package to identify the length of the protein sequence 
+glyma_lengths <- data.frame(
+  gene_id = names(glyma_ped),
+  length = width(glyma_ped)
+)
+
+glyma_blast<-read.delim2("glyma.blast",header = FALSE)
+glyma_blast <- glyma_blast %>%
+  mutate(gene_id  = V1) %>%
+  left_join(glyma_lengths, by = "gene_id") 
+
+glyma_blast<- glyma_blast %>%
+  mutate(
+    identity  = V3,
+    coverage = V4/length
+         ) 
+
+glyma_blast_filter<- glyma_blast%>%
+  filter(identity > 40,
+         coverage> 0.7)
+
+write_tsv(glyma_blast_filter[,1:12],"glyma_filter.blast")
+
+phavu_blast<-read.delim2("phavu.blast",header = FALSE)
+phavu_blast <- phavu_blast %>%
+  mutate(gene_id  = V1) %>%
+  left_join(glyma_lengths, by = "gene_id") 
+
+phavu_blast<- phavu_blast %>%
+  mutate(
+    identity  = V3,
+    coverage = V4/length
+         ) 
+
+phavu_blast_filter<- phavu_blast%>%
+  filter(identity > 40,
+         coverage> 0.7)
+
+write_tsv(phavu_blast_filter[,1:12],"phavu_filter.blast")
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
