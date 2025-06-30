@@ -7,7 +7,6 @@
 #SBATCH --output=duplicated_gene_sets_tree.%j.out
 #SBATCH --error=duplicated_gene_sets_tree.%j.err
 #SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=xl20359@uga.edu
 
 output_file="glyma_output_sets.txt"
 echo -e "fam\tgeneA1\tgeneA2\tgeneB1\tgeneB2" > "$output_file"
