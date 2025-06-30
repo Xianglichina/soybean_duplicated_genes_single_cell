@@ -7,11 +7,11 @@ protien files
 
 the input protein files should be primary, otherwise, too many transcripts 
 
-glyma.Wm82.gnm4.ann1.T8TQ.gene_models_main.gff3.gz ----> glyma.gff3
-glyma.Wm82.gnm4.ann1.T8TQ.protein.faa.gz ---->glyma.pep
+glyma.Wm82.gnm4.ann1.T8TQ.gene_models_main.bed.gz ----> glyma.gff (change the order the columns to match the format that fits the program)
+glyma.Wm82.gnm4.ann1.T8TQ.protein_primary.faa.gz ---->glyma.pep (use the primary ones, making sure one protein sequences for each gene) 
 
-phavu.G19833.gnm2.ann1.PB8d.gene_models_main.gff3.gz ---->phavu.gff3
-phavu.G19833.gnm2.ann1.PB8d.protein.faa.gz ---->phavu.pep
+phavu.G19833.gnm2.ann1.PB8d.gene_models_main.bed.gz ---->phavu.gff
+phavu.G19833.gnm2.ann1.PB8d.protein_primary.faa.gz ---->phavu.pep
 
 #1. generate the blast results # 
 ml DIAMOND/2.1.8-GCC-12.3.0
@@ -22,12 +22,15 @@ diamond blastp -d glyma -q glyma.pep -o glyma.blast -p 20 --sensitive --max-targ
 diamond makedb --in phavu.pep -d phavu
 diamond blastp -d phavu -q glyma.pep -o phavu.blast -p 20 --sensitive --max-target-seqs 5 --evalue 1e-10 --quiet
 
-#2. filter the blast result 
-self: similarity > 80%
-others: similarity > 70%, coverage > 70% 
+#2. filter the blast result using R script 
+self: identity similarity > 40%, coverage > 70% 
+others: identiyty similarity > 40%, coverage > 70% 
+
+### reason to choose 40% as the threshold is based on the observation of the BLAST results for the duplicated genes originating from legume family - based on the tree results. 
 
 #3. run DupGen_finder 
 DupGen_finder.pl -i data -t glyma -c phavu -o results
 
+### reason to not use unique is under the consideration that the whole genome duplicated genes can also involve in other duplicate mechanisms. 
 
 
