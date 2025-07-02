@@ -1,0 +1,189 @@
+---
+title: "DE analysis"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+#BiocManager::install('edgeR')
+
+#load the libraries
+library("tidyverse")
+library("ggplot2")
+library("edgeR")
+
+```
+
+```{r normalize the gene expression early nodule}
+#load the gene count data and make the edgeR object
+early_nodule<-read.csv("early_nodule_reoder.csv")
+early_nodule<-as.data.frame(early_nodule)
+
+rownames(early_nodule)<-early_nodule$X
+early_nodule<-early_nodule[,-1]
+
+early_nodule_group<-c("Cortex_Epidermis", "Nodule_infected_cells", "Nodule_meristem", "Nodule_uninfected_cell", "Pericycle", "Prpcambium")
+early_nodule_group_repeated <- rep(early_nodule_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = early_nodule, group = early_nodule_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+early_nodule_filter_normalized<-cpm(y)
+write.csv(early_nodule_filter_normalized, "early_nodule_filter_normalized.csv")
+```
+
+```{r normalize the gene expression cotyledon}
+#load the gene count data and make the edgeR object
+cotyledon<-read.csv("cotyledon_reorder.csv")
+cotyledon<-as.data.frame(cotyledon)
+
+rownames(cotyledon)<-cotyledon$X
+cotyledon<-cotyledon[,-1]
+
+cotyledon_group<-c("Dividing_cell", "Em_epidermis", "Em_proper_innitials", "Endosperm", "SC_endothelium", "SC_epidermis", "SC_hillum_parenchyma", "SC_hillum_vasculature","SC_inner_integument","SC_parenchyma","SC_phloem","SC_vascular_parenchyma")
+cotyledon_group_repeated <- rep(cotyledon_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = cotyledon, group = cotyledon_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+cotyledon_filter_normalized<-cpm(y)
+write.csv(cotyledon_filter_normalized, "cotyledon_filter_normalized.csv")
+```
+
+```{r normalize the gene expression early_maturation}
+#load the gene count data and make the edgeR object
+early_maturation<-read.csv("early_maturation_reorder.csv")
+early_maturation<-as.data.frame(early_maturation)
+
+rownames(early_maturation)<-early_maturation$X
+early_maturation<-early_maturation[,-1]
+
+early_maturation_group<-c("Dividing_cell", "Em_epidermis", "Em_parenchyma", "Em_vasculature","Endosperm", "SC_endothelium", "SC_epidermis", "SC_parenchyma","SC_vasculature","SC_xylem")
+
+early_maturation_group_repeated <- rep(early_maturation_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = early_maturation, group = early_maturation_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+early_maturation_filter_normalized<-cpm(y)
+write.csv(early_maturation_filter_normalized, "early_maturation_filter_normalized.csv")
+```
+
+```{r normalize the gene expression globular}
+#load the gene count data and make the edgeR object
+globular<-read.csv("globular_reorder.csv")
+globular<-as.data.frame(globular)
+
+rownames(globular)<-globular$X
+globular<-globular[,-1]
+
+globular_group<-c("Dividing_cell", "Em_innitials","Endosperm","SC_endothelium","SC_epidermis", "SC_hillum_parenchyma", "SC_hillum_vasculature", "SC_inner_integument" , "SC_parenchyma", "SC_phloem",  "SC_vascular_parenchyma")
+
+globular_group_repeated <- rep(globular_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = globular, group = globular_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+globular_filter_normalized<-cpm(y)
+write.csv(globular_filter_normalized, "globular_filter_normalized.csv")
+```
+
+```{r normalize the gene expression heart}
+#load the gene count data and make the edgeR object
+heart<-read.csv("heart_reorder.csv")
+heart<-as.data.frame(heart)
+
+rownames(heart)<-heart$X
+heart<-heart[,-1]
+
+heart_group<-c("Dividing_cell", "Em_innitials","Endosperm","SC_endothelium","SC_epidermis", "SC_hillum_parenchyma", "SC_hillum_vasculature", "SC_inner_integument" , "SC_parenchyma", "SC_phloem",  "SC_vascular_parenchyma","SC_xylem")
+
+heart_group_repeated <- rep(heart_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = heart, group = heart_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+heart_filter_normalized<-cpm(y)
+write.csv(heart_filter_normalized, "heart_filter_normalized.csv")
+```
+
+```{r normalize the gene expression hypocotyl}
+#load the gene count data and make the edgeR object
+hypocotyl<-read.csv("hypocotyl_reorder.csv")
+hypocotyl<-as.data.frame(hypocotyl)
+
+rownames(hypocotyl)<-hypocotyl$X
+hypocotyl<-hypocotyl[,-1]
+
+hypocotyl_group<-c("Dividing_cell","Endodermis","Epidermis", "Inner_cortex","Outer_cortex", "Pericycle","Phloem", "Pith", "Procambium", "Trichome", "Vascular_parenchyma")
+
+hypocotyl_group_repeated <- rep(hypocotyl_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = hypocotyl, group = hypocotyl_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+hypocotyl_filter_normalized<-cpm(y)
+write.csv(hypocotyl_filter_normalized, "hypocotyl_filter_normalized.csv")
+```
+
+```{r normalize the gene expression root}
+#load the gene count data and make the edgeR object
+root<-read.csv("root_reorder.csv")
+root<-as.data.frame(root)
+
+rownames(root)<-root$X
+root<-root[,-1]
+
+root_group<-c("Cortex","Endodermis","Epidermis","Pericycle", "Procambium", "Root_hair")
+
+root_group_repeated <- rep(root_group, each = 2)
+
+#normalization after default filter
+y<-DGEList(counts = root, group = root_group_repeated)
+
+keep.genes <- filterByExpr(y, group=y$samples$group)
+table(keep.genes)
+
+y<-y[keep.genes, , keep=FALSE]
+y<-normLibSizes(y)
+
+root_filter_normalized<-cpm(y)
+write.csv(root_filter_normalized, "root_filter_normalized.csv")
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

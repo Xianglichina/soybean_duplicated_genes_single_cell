@@ -1,0 +1,262 @@
+---
+title: "DE analysis"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+
+#load the libraries
+library("tidyverse")
+library("ggplot2")
+
+```
+
+```{r expressed gene pairs filter early nodule}
+#load the gene count data from each tissue 
+early_nodule_filter_pairs<-read.csv("early_nodule_filter_pairs.csv")
+
+expressed_early_nodule_filter_pairs_average<- early_nodule_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_early_nodule_filter_pairs<-unique(expressed_early_nodule_filter_pairs_average$Gene_Pair)
+expressed_early_nodule_filter_pairs_expression<-early_nodule_filter_pairs[early_nodule_filter_pairs$Gene_Pair %in% expressed_early_nodule_filter_pairs,]
+
+expressed_early_nodule_filter_pairs_expression_separated <- expressed_early_nodule_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_early_nodule_filter_pairs_expression_separated_raw<-expressed_early_nodule_filter_pairs_expression_separated  
+write.csv(expressed_early_nodule_filter_pairs_expression_separated_raw, "expressed_early_nodul_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_early_nodule_filter_pairs_expression_separated <- unique(expressed_early_nodule_filter_pairs_expression_separated[,1:3])
+#write.csv(expressed_early_nodule_filter_pairs_expression_separated, "expressed_early_nodule_filter_pairs_expression_separated.csv")
+
+```
+
+```{r expressed gene pairs filter early maturation}
+#load the gene count data from each tissue 
+early_maturation_filter_pairs<-read.csv("early_maturation_filter_pair.csv")
+
+expressed_early_maturation_filter_pairs_average<- early_maturation_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_early_maturation_filter_pairs<-unique(expressed_early_maturation_filter_pairs_average$Gene_Pair)
+expressed_early_maturation_filter_pairs_expression<-early_maturation_filter_pairs[early_maturation_filter_pairs$Gene_Pair %in% expressed_early_maturation_filter_pairs,]
+
+expressed_early_maturation_filter_pairs_expression_separated <- expressed_early_maturation_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_early_maturation_filter_pairs_expression_separated_raw<-expressed_early_maturation_filter_pairs_expression_separated  
+write.csv(expressed_early_maturation_filter_pairs_expression_separated_raw, "expressed_early_maturation_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_early_maturation_filter_pairs_expression_separated <- unique(expressed_early_maturation_filter_pairs_expression_separated[,1:3])
+write.csv(expressed_early_maturation_filter_pairs_expression_separated, "expressed_early_maturation_filter_pairs_expression_separated.csv")
+
+```
+
+```{r expressed gene pairs filter cotyledon}
+#load the gene count data from each tissue 
+cotyledon_filter_pairs<-read.csv("cotyledon_filter_pairs.csv")
+
+expressed_cotyledon_filter_pairs_average<- cotyledon_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_cotyledon_filter_pairs<-unique(expressed_cotyledon_filter_pairs_average$Gene_Pair)
+expressed_cotyledon_filter_pairs_expression<-cotyledon_filter_pairs[cotyledon_filter_pairs$Gene_Pair %in% expressed_cotyledon_filter_pairs,]
+
+expressed_cotyledon_filter_pairs_expression_separated <- expressed_cotyledon_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_cotyledon_filter_pairs_expression_separated_raw<-expressed_cotyledon_filter_pairs_expression_separated  
+write.csv(expressed_cotyledon_filter_pairs_expression_separated_raw, "expressed_cotyledon_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_cotyledon_filter_pairs_expression_separated <- unique(expressed_cotyledon_filter_pairs_expression_separated[,1:3])
+write.csv(expressed_cotyledon_filter_pairs_expression_separated, "expressed_cotyledon_filter_pairs_expression_separated.csv")
+
+```
+
+```{r expressed gene pairs filter globular}
+#load the gene count data from each tissue 
+globular_filter_pairs<-read.csv("globular_filter_pair.csv")
+
+expressed_globular_filter_pairs_average<- globular_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_globular_filter_pairs<-unique(expressed_globular_filter_pairs_average$Gene_Pair)
+expressed_globular_filter_pairs_expression<-globular_filter_pairs[globular_filter_pairs$Gene_Pair %in% expressed_globular_filter_pairs,]
+
+expressed_globular_filter_pairs_expression_separated <- expressed_globular_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_globular_filter_pairs_expression_separated_raw<-expressed_globular_filter_pairs_expression_separated  
+write.csv(expressed_globular_filter_pairs_expression_separated_raw, "expressed_globular_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_globular_filter_pairs_expression_separated <- unique(expressed_globular_filter_pairs_expression_separated[,1:3])
+write.csv(expressed_globular_filter_pairs_expression_separated, "expressed_globular_filter_pairs_expression_separated.csv")
+
+```
+
+```{r expressed gene pairs filter root}
+#load the gene count data from each tissue 
+root_filter_pairs<-read.csv("root_filter_pair.csv")
+
+expressed_root_filter_pairs_average<- root_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_root_filter_pairs<-unique(expressed_root_filter_pairs_average$Gene_Pair)
+expressed_root_filter_pairs_expression<-root_filter_pairs[root_filter_pairs$Gene_Pair %in% expressed_root_filter_pairs,]
+
+expressed_root_filter_pairs_expression_separated <- expressed_root_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_root_filter_pairs_expression_separated_raw<-expressed_root_filter_pairs_expression_separated  
+write.csv(expressed_root_filter_pairs_expression_separated_raw, "expressed_root_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_root_filter_pairs_expression_separated <- unique(expressed_root_filter_pairs_expression_separated[,1:3])
+write.csv(expressed_root_filter_pairs_expression_separated, "expressed_root_filter_pairs_expression_separated.csv")
+
+```
+
+```{r expressed gene pairs filter heart}
+#load the gene count data from each tissue 
+heart_filter_pairs<-read.csv("heart_filter_pair.csv")
+
+expressed_heart_filter_pairs_average<- heart_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_heart_filter_pairs<-unique(expressed_heart_filter_pairs_average$Gene_Pair)
+expressed_heart_filter_pairs_expression<-heart_filter_pairs[heart_filter_pairs$Gene_Pair %in% expressed_heart_filter_pairs,]
+
+expressed_heart_filter_pairs_expression_separated <- expressed_heart_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_heart_filter_pairs_expression_separated_raw<-expressed_heart_filter_pairs_expression_separated  
+write.csv(expressed_heart_filter_pairs_expression_separated_raw, "expressed_heart_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_heart_filter_pairs_expression_separated <- unique(expressed_heart_filter_pairs_expression_separated[,1:3])
+write.csv(expressed_heart_filter_pairs_expression_separated, "expressed_heart_filter_pairs_expression_separated.csv")
+
+```
+
+
+```{r expressed gene pairs filter hypocotyl}
+#load the gene count data from each tissue 
+hypocotyl_filter_pairs<-read.csv("hypocotyl_filter_pair.csv")
+
+expressed_hypocotyl_filter_pairs_average<- hypocotyl_filter_pairs %>%
+  group_by(Gene_Pair) %>%  # Group by the Gene_Pair column
+  summarise(
+    Gene1_Replicate_1 = mean(Gene1_Replicate_1),
+    Gene1_Replicate_2 = mean(Gene1_Replicate_2),
+    Gene2_Replicate_1 = mean(Gene2_Replicate_1),
+    Gene2_Replicate_2 = mean(Gene2_Replicate_2),
+    .groups = "drop"
+  ) %>%
+  # Filter out rows where all four averages are zero
+  filter(!(Gene1_Replicate_1 == 0 &
+           Gene1_Replicate_2 == 0 &
+           Gene2_Replicate_1 == 0 &
+           Gene2_Replicate_2 == 0))
+
+expressed_hypocotyl_filter_pairs<-unique(expressed_hypocotyl_filter_pairs_average$Gene_Pair)
+expressed_hypocotyl_filter_pairs_expression<-hypocotyl_filter_pairs[hypocotyl_filter_pairs$Gene_Pair %in% expressed_hypocotyl_filter_pairs,]
+
+expressed_hypocotyl_filter_pairs_expression_separated <- expressed_hypocotyl_filter_pairs_expression %>%
+  separate(Gene_Pair, into = c("Gene1", "Gene2"), sep = " vs ", remove = FALSE)
+
+
+expressed_hypocotyl_filter_pairs_expression_separated_raw<-expressed_hypocotyl_filter_pairs_expression_separated  
+write.csv(expressed_hypocotyl_filter_pairs_expression_separated_raw, "expressed_hypocotyl_filtere_pairs_expression_separated_raw.csv")
+
+
+expressed_hypocotyl_filter_pairs_expression_separated <- unique(expressed_hypocotyl_filter_pairs_expression_separated[,1:3])
+write.csv(expressed_hypocotyl_filter_pairs_expression_separated, "expressed_hypocotyl_filter_pairs_expression_separated.csv")
+
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
