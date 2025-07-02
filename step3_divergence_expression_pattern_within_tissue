@@ -1,0 +1,58 @@
+########## divergent gene expression analysis ##########
+# step 1. clean the raw gene count for each tissue in R. 
+Recorder the columns and remove the columns without two duplicates (make sure that at least two replicates for each cell type). 
+Conduct correlation test between the two replicates using Spearman test. Only keep the replicates that with the correlation > 0.75
+
+input file: Gm_atlas_Cotyledon_stage_seeds_RNA_gene_celltype_splitReps_counts.txt
+output file: early_maturation_reorder.csv
+R script: reorder_gene_counts.Rmd
+
+# step 2. normalize the gene count 
+input file: early_maturation_reorder.csv
+output file: early_nodule_normalized.csv
+This pseudo bulk single cell data can be treated as nromal bulk data
+normalize the genes across different cell types within the same tissue, but the whether filtered the lowly expressed data or not, still need to figure it out 
+R script: normalization_edgeR.Rmd
+
+# step 3. extract the expression gene counts for each duplicated gene pairs with two replicates using python.
+input files: early_nodule_normalized.csv glyma_duplicated_pairs_unique_1209.csv(unique duplicated gene pairs from above steps)
+output file: early_nodule_pairs.csv 
+Python script: extract_duplicates_expression.py 
+commend: python extract_duplicates_expression.py  early_nodule_normalized.csv glyma_duplicated_pairs_unique_1209.csv early_nodule_pairs.csv 
+
+# step 4. filter the duplicated pairs with no expression in both genes  
+input file: early_nodule_pairs.csv
+output file: expressed_early_nodule_pairs_expression_separated.csv (this file contain the different gene pairs with the two gene IDs separated as two columns)
+R script: filtered_gene_pairs.Rmd
+
+# step 5. generate coexpression network:get_coexp_network_no_filter.r 
+run it in the cluster using the following commend
+Rscript get_coexp_network_no_filter.r  early_nodule_normalized.csv
+
+input file is the normalized (and filtered) gene count:  early_nodule_normalized.csv
+output file is the coexpression network: early_nodule_coexp_network.Rdata  
+
+# step 6. generate paralog coexpression csv file: get_paralog_coexpression.r 
+input file: expressed_early_nodule_pairs_expression_separated.csv (this sheet includes the gene pairs with some expression, removing the ones not expressed in both genes)
+
+run it in the cluster using the following commend
+Rscript get_paralog_coexpression.r  expressed_early_nodule_pairs_expression_separated.csv early_nodule_coexp_network.Rdata 
+
+# step 7. calculate expression fold change. This step should be able to finish in the local computer. 
+input:
+early_nodule_normalized.csv
+early_nodule_paralog_pair_coexpression.csv
+
+output:
+early_nodule_paralog_pair_coexpression_fold_change.csv
+
+The NA in the sheet should be the pairs that with one gene expressed but the others not. 
+
+# step 8. characterize the expression of gene pairs 
+[category1] one expressed one not expressed 
+[category2] dosage balance
+[category3] transcriptional drift
+[category4] specialized
+[category5] diverged
+
+examine the contribution of each categroy in cell-type specifically expressed genes 
