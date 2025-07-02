@@ -11,7 +11,7 @@ R script: reorder_gene_counts.Rmd
 input file: early_maturation_reorder.csv
 output file: early_maturation_filter_normalized.csv
 This pseudo bulk single cell data can be treated as nromal bulk data
-normalize the genes across different cell types within the same tissue, but the whether filtered the lowly expressed data or not, still need to figure it out 
+normalize the genes across different cell types within the same tissue and filtered the lowly expressed genes 
 R script: normalization_edgeR.Rmd
 
 # step 3. extract the expression gene counts for each duplicated gene pairs with two replicates using python.
