@@ -18,25 +18,27 @@ R script: normalization_edgeR.Rmd
 input files: early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### (unique duplicated gene pairs from above steps)
 output file: early_maturation_pairs.csv 
 Python script: extract_duplicates_expression.py 
-commend: python extract_duplicates_expression.py  early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### early_maturation_pairs.csv 
+commend: python extract_duplicates_expression.py  early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### early_maturation_filter_pairs.csv 
 
 # step 4. filter the duplicated pairs with no expression in both genes  
-input file: early_maturation_pairs.csv
-output file: expressed_early_maturation_pairs_expression_separated.csv (this file contain the gene pairs with the two gene IDs separated as two columns)
+input file: early_maturation_filter_pairs.csv
+output file: 
+expressed_early_maturation_pairs_expression_separated_raw.csv (this file contain the gene pairs with the two gene IDs separated as two columns and the expression of the duplicated genes)
+expressed_early_maturation_pairs_expression_separated.csv (this file only contains the information of gene pairs and the two gene IDs)
 R script: filtered_gene_pairs.Rmd
 
 # step 5. generate coexpression network:get_coexp_network_no_filter.r 
 run it in the cluster using the following commend
-Rscript get_coexp_network_no_filter.r  early_maturation_filter_normalized.csv
+Rscript get_coexp_network_filter.r  early_maturation_filter_normalized.csv
 
 input file is the normalized (and filtered) gene count:  early_maturation_filter_normalized.csv
-output file is the coexpression network: early_maturation_coexp_network.Rdata  
+output file is the coexpression network: early_maturation_filter_coexp_network.Rdata  
 
 # step 6. generate paralog coexpression csv file: get_paralog_coexpression.r 
 input file: expressed_early_maturation_pairs_expression_separated.csv (this sheet includes the gene pairs with some expression, removing the ones not expressed in both genes)
 
 run it in the cluster using the following commend
-Rscript get_paralog_coexpression.r  expressed_early_maturation_pairs_expression_separated.csv early_maturation_coexp_network.Rdata 
+Rscript get_paralog_coexpression.r  expressed_early_maturation_pairs_expression_separated.csv early_maturation_filter_coexp_network.Rdata 
 
 # step 7. calculate expression fold change. This step should be able to finish in the local computer. 
 input:
