@@ -3,33 +3,33 @@
 Recorder the columns and remove the columns without two duplicates (make sure that at least two replicates for each cell type). 
 Conduct correlation test between the two replicates using Spearman test. Only keep the replicates that with the correlation > 0.75
 
-input file: Gm_atlas_Cotyledon_stage_seeds_RNA_gene_celltype_splitReps_counts.txt
+input file: Gm_atlas_Early_maturation_RNA_gene_celltype_splitReps_counts.txt
 output file: early_maturation_reorder.csv
 R script: reorder_gene_counts.Rmd
 
 # step 2. normalize the gene count 
 input file: early_maturation_reorder.csv
-output file: early_nodule_normalized.csv
+output file: early_maturation_filter_normalized.csv
 This pseudo bulk single cell data can be treated as nromal bulk data
 normalize the genes across different cell types within the same tissue, but the whether filtered the lowly expressed data or not, still need to figure it out 
 R script: normalization_edgeR.Rmd
 
 # step 3. extract the expression gene counts for each duplicated gene pairs with two replicates using python.
-input files: early_nodule_normalized.csv glyma_duplicated_pairs_unique_1209.csv(unique duplicated gene pairs from above steps)
-output file: early_nodule_pairs.csv 
+input files: early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### (unique duplicated gene pairs from above steps)
+output file: early_maturation_pairs.csv 
 Python script: extract_duplicates_expression.py 
-commend: python extract_duplicates_expression.py  early_nodule_normalized.csv glyma_duplicated_pairs_unique_1209.csv early_nodule_pairs.csv 
+commend: python extract_duplicates_expression.py  early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### early_maturation_pairs.csv 
 
 # step 4. filter the duplicated pairs with no expression in both genes  
-input file: early_nodule_pairs.csv
-output file: expressed_early_nodule_pairs_expression_separated.csv (this file contain the different gene pairs with the two gene IDs separated as two columns)
+input file: early_maturation_pairs.csv
+output file: expressed_early_maturation_pairs_expression_separated.csv (this file contain the gene pairs with the two gene IDs separated as two columns)
 R script: filtered_gene_pairs.Rmd
 
 # step 5. generate coexpression network:get_coexp_network_no_filter.r 
 run it in the cluster using the following commend
-Rscript get_coexp_network_no_filter.r  early_nodule_normalized.csv
+Rscript get_coexp_network_no_filter.r  early_maturation_normalized.csv
 
-input file is the normalized (and filtered) gene count:  early_nodule_normalized.csv
+input file is the normalized (and filtered) gene count:  early_nodule_filter_normalized.csv
 output file is the coexpression network: early_nodule_coexp_network.Rdata  
 
 # step 6. generate paralog coexpression csv file: get_paralog_coexpression.r 
