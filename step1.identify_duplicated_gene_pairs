@@ -2,7 +2,7 @@ step1. identify duplicated gene pairs using DupGen_finder
 https://github.com/qiao-xin/DupGen_finder
 
 input files (downloaded from soybean database): 
-gff3 files
+bed files
 protien files 
 
 the input protein files should be primary, otherwise, too many transcripts 
