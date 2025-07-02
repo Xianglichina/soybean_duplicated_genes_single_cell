@@ -1,0 +1,365 @@
+---
+title: "divergent_gene"
+output: html_document
+date: "2024-10-07"
+---
+
+```{r setup, include=FALSE}
+
+cotyledon<-read.delim2("Gm_atlas_Cotyledon_stage_seeds_RNA_gene_celltype_splitReps_counts.txt")
+cotyledon_reorder<-cotyledon[,c(1,14,2,15,3,16,4,17,5,18,6,19,7,20,8,21,9,22,10,23,11,24,12,25,23,26)]
+colnames(cotyledon_reorder)
+
+cotyledon_reorder_eff<-cotyledon_reorder[,c(1:24)]
+
+early_maturation<-read.delim2("Gm_atlas_Early_maturation_stage_seeds_RNA_gene_celltype_splitReps_counts.txt")
+early_maturation_reorder<-early_maturation[,c(1,12,2,13,3,14,4,15,5,16,6,17,7,18,8,19,9,20,10,21,11,22)]
+colnames(early_maturation_reorder)
+early_maturation_reorder_eff<-early_maturation_reorder[, c(1:20)]
+
+early_nodule<-read.delim2("Gm_atlas_Early_nodule_RNA_gene_celltype_splitReps_counts.txt")
+early_nodule_reoder<-early_nodule[,c(1,10,2,11,3,12,4,13,5,14,6,15,7,16,8,17,9,18)]
+colnames(early_nodule_reoder)
+
+globular<-read.delim2("Gm_atlas_Globular_stage_seeds_RNA_gene_celltype_splitReps_counts.txt")
+globular_reorder<-globular[,c(1,14,2,15,3,16,4,17,5,18,6,19,7,20,8,21,9,22,10,23,11,24,12,25,23,26)]
+colnames(globular_reorder)
+globular_reorder_eff<-globular_reorder[,c(1:20,23,24)]
+
+heart<-read.delim2("Gm_atlas_Heart_stage_seeds_RNA_gene_celltype_splitReps_counts.txt")
+heart_reorder<-heart[,c(1,13,2,14,3,15,4,16,5,17,6,18,7,19,8,20,9,21,10,22,11,23,12,24)]
+colnames(heart_reorder)
+
+hypocotyl<-read.delim2("Gm_atlas_Hypocotyl_RNA_gene_celltype_splitReps_counts.txt")
+hypocotyl_reorder<-hypocotyl[,c(1,14,2,15,3,16,4,17,5,18,6,19,7,20,8,21,9,22,10,23,11,24,12,25,23,26)]
+colnames(hypocotyl_reorder)
+hypocotyl_reorder_eff<-hypocotyl_reorder[,c(1:20,23,24)]
+
+root<-read.delim2("Gm_atlas_Root_RNA_gene_celltype_splitReps_counts.txt")
+root_reorder<-root[,c(1,9,2,10,3,11,4,12,5,13,6,14,7,15,8,16)]
+colnames(root_reorder)
+
+```
+
+```{r correlation Spearman cotyledon}
+
+# Sample dataframe
+df <-cotyledon_reorder_eff
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+cotyledon_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(cotyledon_column_correlations)
+
+
+```
+
+```{r correlation Spearman early_maturation}
+
+# Sample dataframe
+df <-early_maturation_reorder_eff
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+early_maturation_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(early_maturation_column_correlations)
+
+```
+
+```{r correlation Spearman early_nodule}
+
+# Sample dataframe
+df <-early_nodule_reoder
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+early_nodule_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(early_nodule_column_correlations)
+
+early_nodule_reorder_eff<-early_nodule_reoder[, c(1:2,5:12,15:16)]
+
+
+```
+
+```{r correlation Spearman globular}
+
+# Sample dataframe
+df <-globular_reorder_eff
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+globular_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(globular_column_correlations)
+
+#early_nodule_reorder_eff<-early_nodule_reoder[, c(1:2,5:12,15:16)]
+
+
+```
+
+```{r correlation Spearman heart}
+
+# Sample dataframe
+df <-heart_reorder
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+heart_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(heart_column_correlations)
+
+#early_nodule_reorder_eff<-early_nodule_reoder[, c(1:2,5:12,15:16)]
+
+
+```
+
+```{r correlation Spearman hypocotyl}
+
+# Sample dataframe
+df <-hypocotyl_reorder_eff
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+hypocotyl_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(hypocotyl_column_correlations)
+
+#early_nodule_reorder_eff<-early_nodule_reoder[, c(1:2,5:12,15:16)]
+
+
+```
+
+```{r correlation Spearman root}
+
+# Sample dataframe
+df <-root_reorder
+
+# Function to calculate Spearman correlations for each pair of columns
+calculate_columnwise_correlations <- function(data) {
+  num_pairs <- ncol(data) / 2  # Number of replicate pairs
+  correlations <- numeric(num_pairs)  # Vector to store correlations
+  
+  for (i in 1:num_pairs) {
+    # Extract two columns for each pair
+    col1 <- data[[2 * i - 1]]
+    col2 <- data[[2 * i]]
+    
+    # Check if all values in both columns are identical
+    if (length(unique(col1)) == 1 || length(unique(col2)) == 1) {
+      # If constant, return NA for the correlation
+      correlations[i] <- NA
+    } else {
+      # Calculate Spearman correlation for the pair of columns
+      correlations[i] <- cor(col1, col2, method = "spearman")
+    }
+  }
+  
+  # Create a dataframe for results
+  correlation_df <- data.frame(
+    Pair = paste0("Pair_", seq_len(num_pairs)),
+    Spearman_Correlation = correlations
+  )
+  
+  return(correlation_df)
+}
+
+# Apply the function
+root_column_correlations <- calculate_columnwise_correlations(df)
+
+# Display the result
+print(root_column_correlations)
+
+root_reorder_eff<-root_reorder[, c(1:8,11:14)]
+
+```
+
+```{r save the output}
+
+write.csv(early_nodule_reorder_eff,"early_nodule_reoder.csv")
+write.csv(early_maturation_reorder_eff,"early_maturation_reorder.csv")
+write.csv(cotyledon_reorder_eff,"cotyledon_reorder.csv")
+write.csv(globular_reorder_eff,"globular_reorder.csv")
+write.csv(heart_reorder,"heart_reorder.csv")
+write.csv(hypocotyl_reorder_eff,"hypocotyl_reorder.csv")
+write.csv(root_reorder_eff,"root_reorder.csv")
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
