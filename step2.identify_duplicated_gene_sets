@@ -17,6 +17,6 @@ The tree information combined with the duplicated genes with their associated du
 Two out of the six WGD duplicated pairs with the closest relationships. 
 
 #script to extract tree information
-
+duplicated_gene_sets_age_server.sh
 
 #script to filter WGD duplicated genes 
