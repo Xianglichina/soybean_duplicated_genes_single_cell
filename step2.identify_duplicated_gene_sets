@@ -5,7 +5,7 @@ download the duplicated genes with shared origin in legume family, mainly the fi
 legume.fam3.VLMQ.sup1A_hsh.tsv
 #this file listed each gene family and the gene id across all legume species 
 #filter the gene family that only contains four duplicated genes from soybean - glyma 
-#### later need to filter further to focus on the duplicated genes specifically evolve from whole genome duplication 
+#filter further to focus on the duplicated genes specifically evolve from whole genome duplication (all of the four genes)
 
 legume.fam3.VLMQ.sup1B_trees
 #this folder contains all the trees, each for one gene family 
@@ -13,4 +13,10 @@ legume.fam3.VLMQ.sup1B_trees
 
 intersect the two above steps to focus on the four duplicated genes that originate from the ancestor of all legume species 
 
-we could also use the extracted gene ids to distinguish the WGD genes, derived from the second or first rounds of WGD. Two out of the six WGD duplicated pairs with the closest relationships. 
+The tree information combined with the duplicated genes with their associated duplicate mechanisms also us to distinguish the WGD genes, derived from the second or first rounds of WGD.
+Two out of the six WGD duplicated pairs with the closest relationships. 
+
+#script to extract tree information
+
+
+#script to filter WGD duplicated genes 
