@@ -1,0 +1,59 @@
+---
+title: "tree_information_glyma"
+output: html_document
+date: "2025-06-30"
+---
+
+```{r load libraries}
+library(stringr)
+library("DESeq2")
+library("dplyr")
+library("tibble")
+library("ggplot2")
+library("RColorBrewer") 
+library(tidyr)
+```
+
+```{r setup, include=FALSE}
+#read the gene family files
+hsh<-read.delim2("legume.fam3.VLMQ.sup1A_hsh.tsv", header  = FALSE)
+
+#filter the soybean genes from each gene family and make sure that there are only four genes within the family 
+hsh_soy<-hsh %>%
+  filter(str_detect(.[[2]], "glyma.Wm82.gnm4.ann1."))  %>%
+  group_by(V1) %>%                                                 # group by gene family
+  filter(n() == 4) %>%                                              # keep families with 4 members
+  ungroup()                                                       # remove grouping
+
+colnames(hsh_soy) <- c("fam", "gene_id") 
+
+#load the WGD derived genes 
+wgd_duplicated_genes_unique<-read.csv("07042025_Duplicated_genes_wgd_unique.csv") 
+wgd_duplicated_genes_unique <-wgd_duplicated_genes_unique %>%
+  select(Dup, duplication_status)
+
+#filter the gene families that contain exactly four WGD derived genes - not the situation that some of them are WGD, others are not (even though there are only four genes within the family)
+hsh_soy <- hsh_soy %>% 
+  mutate(Dup = str_extract(gene_id, "Glyma\\.\\d{2}G\\d{6}")) %>%   # extract clean gene ID
+  left_join(wgd_duplicated_genes_unique, by = "Dup")    %>%           # join with duplication info
+  filter(!is.na(duplication_status)) %>%                            # keep only valid duplication info
+  group_by(fam) %>%                                                 # group by gene family
+  filter(n() == 4) %>%                                              # keep families with 4 members
+  ungroup()                                                     # remove grouping
+
+#load the information from the tree that include the two clades and each clade contains two duplicated genes 
+duplicated_gene_sets<-read.delim2("glyma_output_sets.txt", header=TRUE)
+
+#filter with the gene sets that the four duplicated genes are all WGD derived. 
+duplicated_gene_sets_updated <- duplicated_gene_sets %>% 
+  filter(fam %in% hsh_soy$fam) %>%
+  mutate(across(
+    starts_with("gene"),
+    ~str_extract(., "Glyma\\.\\d{2}G\\d{6}"),
+    .names = "{.col}_extracted"
+  ))
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
