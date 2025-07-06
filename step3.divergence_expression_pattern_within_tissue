@@ -16,10 +16,10 @@ normalize the genes across different cell types within the same tissue and filte
 #script: normalization_edgeR.Rmd
 
 ### step 3. extract the expression gene counts for each duplicated gene pairs with two replicates using python ###
-#input_files: early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### (unique duplicated gene pairs from above steps)
+#input_files: early_maturation_filter_normalized.csv  07042025_glyma_duplicated_pairs.csv (unique duplicated gene pairs from above steps)
 #output_file: early_maturation_pairs.csv 
 #script: extract_duplicates_expression.py 
-#commend: python extract_duplicates_expression.py  early_maturation_filter_normalized.csv #######glyma_duplicated_pairs_unique_1209.csv####### early_maturation_filter_pairs.csv 
+#commend: python extract_duplicates_expression.py  early_maturation_filter_normalized.csv 07042025_glyma_duplicated_pairs.csv early_maturation_filter_pairs.csv 
 
 ### step 4. filter the duplicated pairs with no expression in both genes ###
 #input_file: early_maturation_filter_pairs.csv
