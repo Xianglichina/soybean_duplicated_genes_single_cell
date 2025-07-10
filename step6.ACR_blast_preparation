@@ -1,2 +1,36 @@
-step1.generate gene reference positions
-#
+### step 1. generate gene reference positions using python ###
+This step is to generate the reference regions for each duplicated gene, extending to both sides of the genes, making sure that the reference regions and the duplicated gene in the same chromosome
+This script is to find the genes upstream and downstream of the gene and check, the gene upstream and downstream must be in the same chromosome. the start of the upstream must less than the start of the gene while the end of the downstream gene must be greater than the end of the gene, otherwise, find the genes more upstream or downstream.  
+
+#input_file:
+glyma_sorted.gff (original_file)
+07102025_Duplicated_genes_unique.csv (gene_List_file) -- generated when extracting gene duplication information from DupGene_finder 
+
+#output_file: 
+07102025_gene_neighbors.csv
+
+#script: 
+query_search_genes_v1.py
+
+#commend: 
+python query_search_genes_v1 glyma_sorted.gff 07102025_Duplicated_genes_unique.csv 07102025_gene_neighbors.csv 
+
+
+### step 2. generate the acr_blast.tsv files that includes the coordinates of ACRs and the coordinates of the corresponding reference (run in cluster) ###
+This step is to generate the BLAST information (query and the reference) for each ACR. 
+
+#input_file:
+input1: 07102025_ACR2genes.csv (file containing association between each ACR to a distantly close gene) 
+input2: 07042025_glyma_duplicated_pairs.csv (file containing all duplicated gene pairs)
+input3: 07102025_gene_neighbors.csv (reference regions for each duplicated gene, generated in the above step)
+
+#output_file
+07102025_acr_blast.tsv
+
+#script:
+blast.2.py 
+
+#commend: 
+python blast.2.py 07102025_ACR2genes.csv 07042025_glyma_duplicated_pairs.csv 07102025_gene_neighbors.csv 07102025_acr_blast.tsv
+
+
