@@ -1,6 +1,6 @@
 step2.identify duplicated gene sets 
 
-download the duplicated genes with shared origin in legume family, mainly the file 
+download the files with the information of duplicated genes with shared origin within legume family
 
 legume.fam3.VLMQ.sup1A_hsh.tsv
 #this file listed each gene family and the gene id across all legume species 
@@ -11,10 +11,9 @@ legume.fam3.VLMQ.sup1B_trees
 #this folder contains all the trees, each for one gene family 
 #use the customized script to filter the trees that contain two clades exclusively including two duplicated genes from soybean and extracted the gene ID from two clades 
 
-intersect the two above steps to focus on the four duplicated genes that originate from the ancestor of all legume species 
+intersect the two above steps to focus on the four WGD duplicated genes that originate from the ancestor of all legume species 
 
 The tree information combined with the duplicated genes with their associated duplicate mechanisms also us to distinguish the WGD genes, derived from the second or first rounds of WGD.
-Two out of the six WGD duplicated pairs with the closest relationships. 
 
 #script to extract tree information
 duplicated_gene_sets_age_server.sh
