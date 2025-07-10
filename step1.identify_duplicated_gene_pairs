@@ -25,7 +25,7 @@ diamond blastp -d phavu -q glyma.pep -o phavu.blast -p 20 --sensitive --max-targ
 #2. filter the blast result using R script 
 self: identity similarity > 40%, coverage > 70% 
 others: identiyty similarity > 40%, coverage > 70% 
-#######06282025_blast_filter.RMD#######
+#######07032025_blast_filter.RMD#######
 
 ### reason to choose 40% as the threshold is based on the observation of the BLAST results for the duplicated genes originating from legume family - based on the tree results. 
 
