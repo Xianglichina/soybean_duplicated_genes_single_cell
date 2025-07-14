@@ -46,4 +46,34 @@ snakemake.file
 
 #commend: snakemake -prs snakemake.file  --profile /home/xl20359/.config/snakemake/batchsub/
 
+### step4. split the files of the acr and the reference regions due to the large amount of ACRs can be hard to be combined ###
+#input_file:
+07102025_acr_blast.tsv
+07102025_reference_regions.tsv
+
+#output_file:
+acr_blast (folder with the acr files separated by different chromosomes)
+reference_regions (folder with the reference files separated by different chromosomes)
+
+#scripts:
+separate_chromosomes_acr_blast.py
+separate_chromosomes_reference_regions.py
+
+#commend:
+python separate_chromosomes_acr_blast.py 07102025_acr_blast.tsv acr_blast
+python separate_chromosomes_reference_regions.py 07102025_reference_regions.tsv reference_regions
+
+####### further step is seperating each chromosome into two files, the first 20000 lines and the rest of the lines #######
+#scripts: 
+acr_blast_split.py
+reference_regions_split.py
+(put these two scripts in to the two folders generated in the above step, acr_blast and reference regions) 
+
+#commends:
+python acr_blast_split.py
+python reference_regions_split.py
+
+
+
+
 
