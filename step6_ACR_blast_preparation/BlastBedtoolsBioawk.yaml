@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bedtools
+  - bioawk
+  - blast
+  - seqkit
+  - python=3.8  # Specify your desired Python version
+  - pip          # If you need pip for additional Python packages
+  - numpy        # Include numpy if it's needed for your scripts
+  - pandas
