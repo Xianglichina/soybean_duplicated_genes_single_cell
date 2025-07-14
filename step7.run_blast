@@ -1,1 +1,19 @@
+use snakemake to run the blast for each acr file (two acr files from each chromosomes)
+#input_files
+0117_snakemake.1_1
+config.1.1.yaml
+snakemake.1_1.sh
+
+envs/BlastBedtoolsBioawk.yaml
+envs/blast.2.15.0.yaml
+genomes/Gmax.fasta
+genomes/Gmax.fasta.fai 
+scripts/extract_coords.py
+
+acr_blast_Gm01_first_20000_lines.tsv
+reference_regions_Gm01_first_20000_lines.tsv
+
+#output_files
+
+
 
