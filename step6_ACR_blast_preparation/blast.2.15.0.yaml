@@ -1,8 +1,0 @@
-name: blast=2.15.0
-channels:
-  - bioconda
-  - conda-forge
-  - defaults
-dependencies:
-  - blast=2.15.0
-prefix: /home/xl20359/.conda/envs/blast=2.15.0
