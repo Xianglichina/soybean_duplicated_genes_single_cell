@@ -10,8 +10,8 @@ genomes/Gmax.fasta
 genomes/Gmax.fasta.fai 
 scripts/extract_coords.py
 
-acr_blast_Gm01_first_20000_lines.tsv
-reference_regions_Gm01_first_20000_lines.tsv
+acr_blast_Gm01.tsv
+reference_regions_Gm01.tsv
 
 #output_files
 
