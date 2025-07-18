@@ -1,0 +1,228 @@
+# Load config
+configfile: "config.2.1.yaml"
+
+# Importing necessary libraries
+import pandas as pd
+
+# Load reference regions into a DataFrame
+reference_regions = pd.read_csv(config["reference_regions_file"], sep='\t')
+
+# Drop rows with missing ref_start or ref_end
+reference_regions = reference_regions.dropna(subset=['ref_start', 'ref_end'])
+
+# Create lists to hold chromosome, start, and end data
+ACR_chromosomes = reference_regions['ACR_chromosome'].tolist()
+ACR_starts = reference_regions['ACR_start'].tolist()
+ACR_ends = reference_regions['ACR_end'].tolist()
+ref_chromosomes = reference_regions['ref_chromosome'].tolist()
+
+# Ensure ref_start and ref_end are integers
+reference_regions['ref_start'] = reference_regions['ref_start'].astype(int)
+reference_regions['ref_end'] = reference_regions['ref_end'].astype(int)
+
+ref_starts = reference_regions['ref_start'].tolist()
+ref_ends = reference_regions['ref_end'].tolist()
+
+# Create variables for ACR and reference coordinates
+ACR_coordinates = [f"{chrom}:{start}-{end}" for chrom, start, end in zip(ACR_chromosomes, ACR_starts, ACR_ends)]
+ref_coordinates = [f"{chrom}:{start}-{end}" for chrom, start, end in zip(ref_chromosomes, ref_starts, ref_ends)]
+
+acr_ref_dict = {}
+for acr, ref_chrom, ref_start, ref_end in zip(ACR_coordinates, ref_chromosomes, ref_starts, ref_ends):
+    if acr not in acr_ref_dict:
+        acr_ref_dict[acr] = []
+    acr_ref_dict[acr].append(f"{ref_chrom}:{ref_start}-{ref_end}")
+
+rule all:
+    input:
+        expand("02.ACR_fasta_regions/{species}.ACRs.fa", species=config["species_list"]),
+        expand("02.ACR_fasta_regions/{species}.regions.fa", species=config["species_list"]),
+        expand("03.ref_regions/{ref_coord}_dir/{species}.{ref_coord}.fa", 
+               ref_coord=ref_coordinates, species=config["species_list"]),
+        expand("03.acr_regions/{acr_coord}_dir/{species}.{acr_coord}.acrs.fa", 
+               acr_coord=ACR_coordinates, 
+               species=config["species_list"]),
+        expand("03.ref_regions/{ref_coord}_dir/{species}.{ref_coord}.db", 
+               ref_coord=ref_coordinates, species=config["species_list"]),
+        expand("04.Blast_ACRs_vs_Regions/{acr_coord}_dir/{species}_ACRs.vs.{acr_coord}.regions.blast", 
+               acr_coord=ACR_coordinates, species=config["species_list"]),
+        expand("05.Blast_ACRs_vs_Regions_combined/{species}_ACRs.vs.all_combined_regions.blast", 
+               species=config["species_list"]),
+               
+# Rule to extract coordinates for ACR and syntenic regions
+rule extract_coords:
+    input:
+        acr_syntenic_file=config["acr_syntenic_file"]
+    output:
+        extracted_coords="01.Extracted_coordinates/{species}.coords.tsv"
+    message: "Extracting coordinates for {wildcards.species}"
+    params:
+        species=lambda wildcards: wildcards.species  # Ensure species is passed as a parameter
+    script:
+        "scripts/extract_coords.py"
+
+# Rule to extract ACR fasta sequences
+rule get_fasta_acrs:
+    input:
+        extracted_coords="01.Extracted_coordinates/{species}.coords.tsv"
+    params:
+        fasta_file=lambda wildcards: config["species_fasta"][wildcards.species]
+    output:
+        fa_acrs="02.ACR_fasta_regions/{species}.ACRs.fa"
+    resources:
+        mem_mb=4000,
+        disk_mb=2000,
+        runtime=120,
+        partition="schmitz_p"
+    conda:
+        "envs/BlastBedtoolsBioawk.yaml"
+    threads: 5
+    shell:
+        """
+        bedtools getfasta -name -fi {params.fasta_file} -bed <(awk 'NR > 1 && $2<$3 {{print $1"\t"$2"\t"$3}}' {input.extracted_coords}) > {output.fa_acrs}
+	"""
+
+# Rule to extract syntenic region fasta sequences
+rule get_fasta_regions:
+    input:
+        extracted_coords="01.Extracted_coordinates/{species}.coords.tsv"
+    params:
+        fasta_file=lambda wildcards: config["species_fasta"][wildcards.species]
+    output:
+        fa_regions="02.ACR_fasta_regions/{species}.regions.fa"
+    resources:
+        mem_mb=4000,
+        disk_mb=2000,
+        runtime=120,
+        partition="schmitz_p"
+    conda:
+        "envs/BlastBedtoolsBioawk.yaml"
+    threads: 5
+    shell:
+        """
+        # Extract FASTA regions using bedtools
+         bedtools getfasta -name -fi {params.fasta_file} -bed <(awk 'NR > 1 && $5 < $6 {{print $4"\t"$5"\t"$6}}' {input.extracted_coords}) > temp.fa
+	# Remove duplicate sequences (same header and sequence)
+        awk '/^>/ {{header=$0; getline seq; if (!seen[header, seq]++) {{print header; print seq}}}}' temp.fa > {output.fa_regions}
+        
+        # Clean up temporary file
+        rm temp.fa
+        """    
+
+# Rule to isolate sequences in syntenic regions
+rule isolate_sequence_in_block:
+    input:
+        species_regions=rules.get_fasta_regions.output.fa_regions
+    resources:
+        mem_mb=2000,
+        disk_mb=2000,
+        runtime=120,
+        partition="schmitz_p"
+    output:
+        syntenic_block_fa="03.ref_regions/{ref_coordinates}_dir/{species}.{ref_coordinates}.fa"
+    params:
+        ref_coordinates=lambda wildcards: f"{wildcards.ref_coordinates}"
+    conda:
+        "envs/BlastBedtoolsBioawk.yaml"
+    shell:
+        """
+        seqkit grep -p '::{params.ref_coordinates}' {input.species_regions} > {output.syntenic_block_fa}
+	"""
+
+rule isolate_sequence_in_acrs:
+    input:
+        species_regions=rules.get_fasta_acrs.output.fa_acrs,
+        extracted_coords="01.Extracted_coordinates/{species}.coords.tsv"
+    resources:
+        mem_mb=2000,
+        disk_mb=2000,
+        runtime=120,
+        partition="schmitz_p"
+    output:
+        acr_syntenic_block_fa="03.acr_regions/{acr_coord}_dir/{species}.{acr_coord}.acrs.fa"
+    params:
+        acr_coordinates=lambda wildcards: f"{wildcards.acr_coord}",
+    conda:
+        "envs/BlastBedtoolsBioawk.yaml"
+    shell:
+        """
+        seqkit grep -p '::{params.acr_coordinates}' {input.species_regions} > {output.acr_syntenic_block_fa}.tmp
+        
+        # Remove duplicate lines (entire line, including header if repeated)
+        awk '!seen[$0]++' {output.acr_syntenic_block_fa}.tmp > {output.acr_syntenic_block_fa}
+        
+	# Clean up temporary file
+        rm {output.acr_syntenic_block_fa}.tmp
+
+
+	"""
+
+rule make_blast_db_region:
+    input:
+        region_fa = rules.isolate_sequence_in_block.output.syntenic_block_fa
+    resources:
+        mem_mb=6250,
+        disk_mb=2000,
+        runtime=120,
+        partition="schmitz_p"
+    output:
+        db_blast ="03.ref_regions/{ref_coordinates}_dir/{species}.{ref_coordinates}.db",
+        db_blast_real = "03.ref_regions/{ref_coordinates}_dir/{species}.{ref_coordinates}.db.nin"
+    message: "Pulling sequence underlying ACRs"
+    conda:
+        "envs/blast.2.15.0.yaml"
+    threads: 5
+    shell:
+        """ 
+        makeblastdb -in {input.region_fa} -dbtype nucl -parse_seqids -out {output.db_blast}
+        touch {output.db_blast}
+        """
+
+rule blast_acr_regions:
+    input:
+        species_acrs = "03.acr_regions/{acr_coord}_dir/{species}.{acr_coord}.acrs.fa",
+        syntenic_region_dbs = lambda wildcards: [
+            f"03.ref_regions/{ref_coord}_dir/{wildcards.species}.{ref_coord}.db" 
+            for ref_coord in acr_ref_dict[wildcards.acr_coord]
+        ]
+    resources:
+        mem_mb=6250,
+        disk_mb=6250,
+        runtime=2000,
+        partition="schmitz_p"
+    output:
+        blast = "04.Blast_ACRs_vs_Regions/{acr_coord}_dir/{species}_ACRs.vs.{acr_coord}.regions.blast"
+    message: "Blasting ACRs against all references for {wildcards.acr_coord}"
+    conda:
+        "envs/blast.2.15.0.yaml"
+    threads: 5
+    shell:
+        """ 
+        for db in {input.syntenic_region_dbs}; do \
+            blastn -query {input.species_acrs} -db $db -task blastn-short -outfmt 6 -evalue 1e-3 -max_target_seqs 4 -num_threads {threads} -word_size 7 -gapopen 5 -gapextend 2 -penalty -1 -reward 1 -dust no >> {output.blast}; \
+        done
+        """
+
+# Rule to combine BLAST results for all regions
+rule combine_blast_all_regions:
+    output:
+        combined_blast="05.Blast_ACRs_vs_Regions_combined/{species}_ACRs.vs.all_combined_regions.blast"
+    resources:
+        mem_mb=6250,
+        disk_mb=2000,
+        runtime=120,
+        partition="schmitz_p"
+    message: "Combining all BLAST results for {wildcards.species}"
+    run:
+        import glob
+        import os
+
+        # Get all files that match the current species
+        pattern = f"04.Blast_ACRs_vs_Regions/*_dir/{wildcards.species}_ACRs.vs.*.regions.blast"
+        files = sorted(glob.glob(pattern))
+
+        # Write them to the output file
+        with open(output.combined_blast, "wb") as out_f:
+            for f in files:
+                with open(f, "rb") as in_f:
+                    out_f.write(in_f.read())
