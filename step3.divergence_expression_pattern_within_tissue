@@ -1,4 +1,4 @@
-########## divergent gene expression analysis ##########
+########## divergent gene expression analysis within tissue ##########
 ### step 1. clean the raw gene count for each tissue in R ###
 Recorder the columns and remove the columns without two duplicates (make sure that at least two replicates for each cell type). 
 Conduct correlation test between the two replicates using Spearman test. Only keep the replicates that with the correlation > 0.75
@@ -70,10 +70,18 @@ early_nodule_filter_paralog_pair_coexpression_fold_change.csv
 presentation_early_nodule_expression_type_final_all.csv
 
 #script:
-0715_charaterization_gene_pair_expression_within_tissue.RMD
+0715_charaterization_gene_pair_expression_within_tissue.Rmd
 
 #script (generate the supplementary table for summarizing the expression patterns withiin the tissues) 
-0715_summary_expression_types_within_tissues.RMD
+0715_summary_expression_types_within_tissues.Rmd
+
+########## divergent gene expression analysis within tissue ##########
+#load the combined expression patterns across tissue for each gene pair
+#calculate the expression stability across stages or across tissues 
+
+#input_file: 07152025_combined_expression_patterns.csv
+
+#script:07152025_expression_stability.Rmd
 
 
 
