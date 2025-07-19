@@ -1,0 +1,8 @@
+#step1. generate the duplicated gene pairs from each setm distinguish recent duplication and ancestral duplication #
+#input_file: 07162025_duplicated_gene_set_updated.csv
+
+#output_file: 0718_duplicated_gene_pairs_set.csv
+
+#script:
+07162025_duplicated_gene_sets_pairs.Rmd 
+  
