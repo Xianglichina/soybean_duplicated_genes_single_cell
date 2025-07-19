@@ -1,0 +1,181 @@
+---
+title: "expression_correlation"
+output: html_document
+date: "2025-07-03"
+---
+
+```{r setup, include=FALSE}
+# Load tidyverse if not already
+library(tidyverse)
+
+# Read data
+df <- read.csv("07152025_combined_expression_patterns.csv")  # replace with your filename
+
+# Define columns
+stage_cols <- c("expression_type_cotyledon", "expression_type_early_maturation",
+                "expression_type_globular", "expression_type_heart")
+tissue_cols <- c("expression_type_hypocotyl", "expression_type_root", "expression_type_early_nodule","expression_type_heart")
+
+
+pattern_map <- c(
+  "dosage_balance" = "similar_expression",
+  "paralogue_dominance" = "similar_expression",
+  "specialized" = "similar_expression",
+  "diverged" = "dissimilar_expression",
+  "others" = "dissimilar_expression",
+  "mono_expressed" = "mono",
+  "not_expressed" = "not_expressed"
+)
+
+# Apply the pattern mapping
+df_simplified <- df %>%
+  mutate(across(all_of(c(stage_cols, tissue_cols)), ~ pattern_map[.]))
+
+# Step 2: Calculate stability and core class on simplified patterns
+stability_scores <- df_simplified %>%
+  rowwise() %>%
+  mutate(
+    # Count unique patterns
+    stage_unique = n_distinct(c_across(all_of(stage_cols))),
+    tissue_unique = n_distinct(c_across(all_of(tissue_cols))),
+
+    # Stability scores
+    Stage_Stability_Score = 1 - (stage_unique - 1) / (length(stage_cols) - 1),
+    Tissue_Stability_Score = 1 - (tissue_unique - 1) / (length(tissue_cols) - 1),
+
+    # Core pattern for stage: only if repeated
+    Core_Pattern_Stage = {
+      stage_patterns <- c_across(all_of(stage_cols))
+      stage_table <- table(stage_patterns)
+      if (any(stage_table >= 2)) names(which.max(stage_table)) else NA_character_
+    },
+
+    # Core pattern for tissue: only if repeated
+    Core_Pattern_Tissue = {
+      tissue_patterns <- c_across(all_of(tissue_cols))
+      tissue_table <- table(tissue_patterns)
+      if (any(tissue_table >= 2)) names(which.max(tissue_table)) else NA_character_
+    }
+  ) %>%
+  ungroup() %>%
+  select(Gene_Pair, Stage_Stability_Score, Tissue_Stability_Score,
+         Core_Pattern_Stage, Core_Pattern_Tissue)
+
+stability_scores <- stability_scores %>%
+    mutate(shared_core_pattern = if_else(Core_Pattern_Stage == Core_Pattern_Tissue,
+                                       Core_Pattern_Stage,
+                                       "not_shared"))
+
+stability_scores_full <- stability_scores %>%
+  left_join(df, by = "Gene_Pair")
+
+
+core_stages <- stability_scores_full %>%
+  group_by(Core_Pattern_Stage) %>%
+  summarise(
+    count = n(),
+    mean_stage_stability = mean(Stage_Stability_Score, na.rm = TRUE)
+  )
+
+core_tissues <- stability_scores_full %>%
+  group_by(Core_Pattern_Tissue) %>%
+  summarise(
+    count = n(),
+    mean_stage_stability = mean(Tissue_Stability_Score, na.rm = TRUE)
+  )
+
+core_stages_dup <- stability_scores_full %>%
+  group_by(Duplication_status.x, Core_Pattern_Stage) %>%
+  summarise(
+    count = n(),
+    mean_stage_stability = mean(Stage_Stability_Score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(Duplication_status.x) %>%
+  mutate(percent = count / sum(count) * 100) %>%
+  ungroup()
+
+core_tissues_dup <- stability_scores_full %>%
+  group_by(Duplication_status.x, Core_Pattern_Tissue) %>%
+  summarise(
+    count = n(),
+      mean_tissue_stability = mean(Tissue_Stability_Score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(Duplication_status.x) %>%
+  mutate(percent = count / sum(count) * 100) %>%
+  ungroup()
+
+sharedness<- stability_scores %>%  
+  count(shared_core_pattern, name = "count")
+
+```
+
+
+```{r plot1}
+library(tidyverse)
+
+# Add a category label
+core_stages$category <- "Stage"
+core_tissues$category <- "Tissue"
+
+# Combine both into one data frame
+combined <- bind_rows(
+  core_stages %>% rename(Core_Pattern = Core_Pattern_Stage),
+  core_tissues %>% rename(Core_Pattern = Core_Pattern_Tissue)
+)
+
+combined <- combined %>% drop_na()
+
+ggplot(combined, aes(x = Core_Pattern, y = mean_stage_stability, size = count, color = category)) +
+  geom_point(alpha = 0.75) +
+  scale_size(range = c(3, 25), name = "Gene Count") +
+  scale_color_manual(values = c("Stage" = "darkblue", "Tissue" = "red")) +
+  theme_minimal() +
+  labs(
+    x = "Expression Pattern",
+    y = "Mean Stability",
+    title = "Expression Stability Across Stages and Tissues"
+  ) +
+ geom_text(aes(label = count), vjust = -1.2, size = 4.5, color = "black")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+```{r plots distributions of the stability scores}
+library(ggridges)
+library(ggplot2)
+library(ggridges)
+library(patchwork)
+
+#Stage plot
+p1 <- ggplot(stability_scores_full, aes(x = Stage_Stability_Score, y = Core_Pattern_Stage, fill = Core_Pattern_Stage)) +
+  geom_density_ridges(scale = 1.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-0.2, 1.2)) +  # Ensure same x scale
+  labs(
+    title = "Stage Stability Score Distribution by Core Pattern Stage",
+    x = "Stability Score",
+    y = "Core Pattern Stage"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Tissue plot
+p2 <- ggplot(stability_scores_full, aes(x = Tissue_Stability_Score, y = Core_Pattern_Tissue, fill = Core_Pattern_Tissue)) +
+  geom_density_ridges(scale = 1.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-0.2, 1.2)) +  # Match x scale
+  labs(
+    title = "Tissue Stability Score Distribution by Core Pattern Tissue",
+    x = "Stability Score",
+    y = "Core Pattern Tissue"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Combine plots
+p1 + p2
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

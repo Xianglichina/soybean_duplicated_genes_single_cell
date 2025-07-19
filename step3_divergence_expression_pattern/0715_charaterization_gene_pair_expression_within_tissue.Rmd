@@ -1,0 +1,974 @@
+---
+title: "characterize_duplicated_gene_pairs"
+output: html_document
+date: "2024-12-13"
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(purrr)
+
+duplicated_gene_pairs<-read.csv("07042025_glyma_duplicated_pairs.csv")
+duplicated_gene_pairs <- duplicated_gene_pairs %>%
+  mutate (Gene_Pair = paste(duplicate_1,duplicate_2, sep = " vs "))
+
+duplicated_gene_pairs_percentage <- duplicated_gene_pairs %>%
+  group_by(duplication_status) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  mutate(percentage = count / sum(count) )
+
+```
+
+
+```{r early_nodule}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+early_nodule_filter<-read.csv("early_nodule_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+#early_nodule_filter_expression<-read.csv("07152025_expressed_early_nodule_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+early_nodule_filter_one_express<-early_nodule_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+early_nodule_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+early_nodule_filter_dosage_balance<-early_nodule_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+early_nodule_filter_paralogue_dominance<-early_nodule_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+early_nodule_filter_specialized<-early_nodule_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+early_nodule_filter_diverged<-early_nodule_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+early_nodule_filter_dosage_balance$expression_type<-"dosage_balance"
+early_nodule_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+early_nodule_filter_specialized$expression_type<-"specialized"
+early_nodule_filter_diverged$expression_type<-"diverged"
+
+early_nodule_expression_type<-rbind(early_nodule_filter_dosage_balance, early_nodule_filter_paralogue_dominance, early_nodule_filter_specialized, early_nodule_filter_diverged, early_nodule_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but at least one gene expressed
+early_nodule_other_expression_type<- anti_join(early_nodule_filter,early_nodule_expression_type, by= "Gene_Pair")
+early_nodule_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+early_nodule_not_expressed<-anti_join(duplicated_gene_pairs,early_nodule_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+early_nodule_expression_type_final<-rbind(early_nodule_expression_type,early_nodule_other_expression_type)
+early_nodule_expression_type_final<-left_join(early_nodule_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+early_nodule_expression_type_final_all<-left_join(duplicated_gene_pairs,early_nodule_expression_type_final, by="Gene_Pair")
+early_nodule_expression_type_final_all$expression_type[is.na(early_nodule_expression_type_final_all$expression_type)] <- "not_expressed"
+
+early_nodule_summary_expression_duplication <- early_nodule_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+early_nodule_summary_duplication <- early_nodule_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+early_nodule_summary_expression <- early_nodule_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(early_nodule_expression_type_final_all, "presentation_early_nodule_expression_type_final_all.csv")
+```
+
+
+```{r cotyledon}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+cotyledon_filter<-read.csv("cotyledon_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue
+#cotyledon_filter_expression<-read.csv("07152025_expressed_cotyledon_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+cotyledon_filter_one_express<-cotyledon_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+cotyledon_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+cotyledon_filter_dosage_balance<-cotyledon_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+cotyledon_filter_paralogue_dominance<-cotyledon_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+cotyledon_filter_specialized<-cotyledon_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+cotyledon_filter_diverged<-cotyledon_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+cotyledon_filter_dosage_balance$expression_type<-"dosage_balance"
+cotyledon_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+cotyledon_filter_specialized$expression_type<-"specialized"
+cotyledon_filter_diverged$expression_type<-"diverged"
+
+cotyledon_expression_type<-rbind(cotyledon_filter_dosage_balance, cotyledon_filter_paralogue_dominance, cotyledon_filter_specialized, cotyledon_filter_diverged, cotyledon_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but both genes expressed 
+cotyledon_other_expression_type<- anti_join(cotyledon_filter,cotyledon_expression_type, by= "Gene_Pair")
+cotyledon_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+cotyledon_not_expressed<-anti_join(duplicated_gene_pairs,cotyledon_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+cotyledon_expression_type_final<-rbind(cotyledon_expression_type,cotyledon_other_expression_type)
+cotyledon_expression_type_final<-left_join(cotyledon_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+cotyledon_expression_type_final_all<-left_join(duplicated_gene_pairs,cotyledon_expression_type_final, by="Gene_Pair")
+cotyledon_expression_type_final_all$expression_type[is.na(cotyledon_expression_type_final_all$expression_type)] <- "not_expressed"
+
+cotyledon_summary_expression_duplication <- cotyledon_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+cotyledon_summary_duplication <- cotyledon_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+cotyledon_summary_expression <- cotyledon_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(cotyledon_expression_type_final_all , "presentation_cotyledon_expression_type_final_all.csv")
+```
+
+
+```{r heart}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+heart_filter<-read.csv("heart_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue
+#heart_filter_expression<-read.csv("07152025_expressed_heart_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+heart_filter_one_express<-heart_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+heart_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+heart_filter_dosage_balance<-heart_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+heart_filter_paralogue_dominance<-heart_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+heart_filter_specialized<-heart_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+heart_filter_diverged<-heart_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+heart_filter_dosage_balance$expression_type<-"dosage_balance"
+heart_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+heart_filter_specialized$expression_type<-"specialized"
+heart_filter_diverged$expression_type<-"diverged"
+
+heart_expression_type<-rbind(heart_filter_dosage_balance, heart_filter_paralogue_dominance, heart_filter_specialized, heart_filter_diverged, heart_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but both genes expressed 
+heart_other_expression_type<- anti_join(heart_filter,heart_expression_type, by= "Gene_Pair")
+heart_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+heart_not_expressed<-anti_join(duplicated_gene_pairs,heart_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+heart_expression_type_final<-rbind(heart_expression_type,heart_other_expression_type)
+heart_expression_type_final<-left_join(heart_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+heart_expression_type_final_all<-left_join(duplicated_gene_pairs,heart_expression_type_final, by="Gene_Pair")
+heart_expression_type_final_all$expression_type[is.na(heart_expression_type_final_all$expression_type)] <- "not_expressed"
+
+heart_summary_expression_duplication <- heart_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+heart_summary_duplication <- heart_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+heart_summary_expression <- heart_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(heart_expression_type_final_all , "presentation_heart_expression_type_final_all.csv")
+```
+
+
+```{r globular}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+globular_filter<-read.csv("globular_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue
+#globular_filter_expression<-read.csv("07152025_expressed_globular_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+globular_filter_one_express<-globular_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+globular_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+globular_filter_dosage_balance<-globular_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+globular_filter_paralogue_dominance<-globular_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+globular_filter_specialized<-globular_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+globular_filter_diverged<-globular_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+globular_filter_dosage_balance$expression_type<-"dosage_balance"
+globular_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+globular_filter_specialized$expression_type<-"specialized"
+globular_filter_diverged$expression_type<-"diverged"
+
+globular_expression_type<-rbind(globular_filter_dosage_balance, globular_filter_paralogue_dominance, globular_filter_specialized, globular_filter_diverged, globular_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but both genes expressed 
+globular_other_expression_type<- anti_join(globular_filter,globular_expression_type, by= "Gene_Pair")
+globular_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+globular_not_expressed<-anti_join(duplicated_gene_pairs,globular_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+globular_expression_type_final<-rbind(globular_expression_type,globular_other_expression_type)
+globular_expression_type_final<-left_join(globular_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+globular_expression_type_final_all<-left_join(duplicated_gene_pairs,globular_expression_type_final, by="Gene_Pair")
+globular_expression_type_final_all$expression_type[is.na(globular_expression_type_final_all$expression_type)] <- "not_expressed"
+
+globular_summary_expression_duplication <- globular_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+globular_summary_duplication <- globular_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+globular_summary_expression <- globular_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(globular_expression_type_final_all , "presentation_globular_expression_type_final_all.csv")
+```
+
+
+```{r hypocotyl}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+hypocotyl_filter<-read.csv("hypocotyl_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue
+#hypocotyl_filter_expression<-read.csv("07152025_expressed_hypocotyl_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+hypocotyl_filter_one_express<-hypocotyl_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+hypocotyl_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+hypocotyl_filter_dosage_balance<-hypocotyl_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+hypocotyl_filter_paralogue_dominance<-hypocotyl_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+hypocotyl_filter_specialized<-hypocotyl_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+hypocotyl_filter_diverged<-hypocotyl_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+hypocotyl_filter_dosage_balance$expression_type<-"dosage_balance"
+hypocotyl_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+hypocotyl_filter_specialized$expression_type<-"specialized"
+hypocotyl_filter_diverged$expression_type<-"diverged"
+
+hypocotyl_expression_type<-rbind(hypocotyl_filter_dosage_balance, hypocotyl_filter_paralogue_dominance, hypocotyl_filter_specialized, hypocotyl_filter_diverged, hypocotyl_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but both genes expressed 
+hypocotyl_other_expression_type<- anti_join(hypocotyl_filter,hypocotyl_expression_type, by= "Gene_Pair")
+hypocotyl_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+hypocotyl_not_expressed<-anti_join(duplicated_gene_pairs,hypocotyl_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+hypocotyl_expression_type_final<-rbind(hypocotyl_expression_type,hypocotyl_other_expression_type)
+hypocotyl_expression_type_final<-left_join(hypocotyl_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+hypocotyl_expression_type_final_all<-left_join(duplicated_gene_pairs,hypocotyl_expression_type_final, by="Gene_Pair")
+hypocotyl_expression_type_final_all$expression_type[is.na(hypocotyl_expression_type_final_all$expression_type)] <- "not_expressed"
+
+hypocotyl_summary_expression_duplication <- hypocotyl_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+hypocotyl_summary_duplication <- hypocotyl_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+hypocotyl_summary_expression <- hypocotyl_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(hypocotyl_expression_type_final_all , "presentation_hypocotyl_expression_type_final_all.csv")
+```
+
+
+```{r root}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+root_filter<-read.csv("root_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue
+#root_filter_expression<-read.csv("07152025_expressed_root_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+root_filter_one_express<-root_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+root_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+root_filter_dosage_balance<-root_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+root_filter_paralogue_dominance<-root_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+root_filter_specialized<-root_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+root_filter_diverged<-root_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+root_filter_dosage_balance$expression_type<-"dosage_balance"
+root_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+root_filter_specialized$expression_type<-"specialized"
+root_filter_diverged$expression_type<-"diverged"
+
+root_expression_type<-rbind(root_filter_dosage_balance, root_filter_paralogue_dominance, root_filter_specialized, root_filter_diverged, root_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but both genes expressed 
+root_other_expression_type<- anti_join(root_filter,root_expression_type, by= "Gene_Pair")
+root_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+root_not_expressed<-anti_join(duplicated_gene_pairs,root_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+root_expression_type_final<-rbind(root_expression_type,root_other_expression_type)
+root_expression_type_final<-left_join(root_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+root_expression_type_final_all<-left_join(duplicated_gene_pairs,root_expression_type_final, by="Gene_Pair")
+root_expression_type_final_all$expression_type[is.na(root_expression_type_final_all$expression_type)] <- "not_expressed"
+
+
+root_summary_expression_duplication <- root_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+
+root_summary_duplication <- root_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+
+root_summary_expression <- root_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(root_expression_type_final_all , "presentation_root_expression_type_final_all.csv")
+```
+
+
+```{r early_maturation}
+#load the data from last step, fold change calculation using the gene pairs at least one gene expressed 
+early_maturation_filter<-read.csv("early_maturation_filter_paralog_pair_coexpression_fold_change.csv")
+
+#load the normalized gene expression of gene pairs across different cell types within the tissue
+#early_maturation_filter_expression<-read.csv("07152025_expressed_early_maturation_filtere_pairs_expression_separated_raw.csv")
+
+#the gene pairs with fold change is equal to NA is the gene pairs with one gene expressed while the other not expressed
+early_maturation_filter_one_express<-early_maturation_filter %>%
+  filter(is.na(coexpression))
+
+#assign the expression type to these gene pairs, one expressed while the other not 
+early_maturation_filter_one_express$expression_type<-"mono_expressed"
+
+#extract the other types of expression patterns using fold change and coexpression information 
+early_maturation_filter_dosage_balance<-early_maturation_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue <1,
+        log2FC_sd_tissue <1)
+
+early_maturation_filter_paralogue_dominance<-early_maturation_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue <1)
+
+early_maturation_filter_specialized<-early_maturation_filter %>%
+  filter(coexpression > 0.9,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+early_maturation_filter_diverged<-early_maturation_filter %>%
+  filter(coexpression < 0.5,
+        log2FC_mean_tissue >= 1,
+        log2FC_sd_tissue >=1)
+
+#assign the expression type to these gene pairs 
+early_maturation_filter_dosage_balance$expression_type<-"dosage_balance"
+early_maturation_filter_paralogue_dominance$expression_type<-"paralogue_dominance"
+early_maturation_filter_specialized$expression_type<-"specialized"
+early_maturation_filter_diverged$expression_type<-"diverged"
+
+early_maturation_expression_type<-rbind(early_maturation_filter_dosage_balance, early_maturation_filter_paralogue_dominance, early_maturation_filter_specialized, early_maturation_filter_diverged, early_maturation_filter_one_express)
+
+#extract the gene pairs not included in any of above expression type but both genes expressed 
+early_maturation_other_expression_type<- anti_join(early_maturation_filter,early_maturation_expression_type, by= "Gene_Pair")
+early_maturation_other_expression_type$expression_type<-"others"
+
+#extract the gene pairs not expressed in this tissue 
+early_maturation_not_expressed<-anti_join(duplicated_gene_pairs,early_maturation_filter, by="Gene_Pair")
+
+#focus on the gene pairs with different expression types 
+
+#this object includes the gene pairs expressed but with different expression patterns 
+early_maturation_expression_type_final<-rbind(early_maturation_expression_type,early_maturation_other_expression_type)
+early_maturation_expression_type_final<-left_join(early_maturation_expression_type_final, duplicated_gene_pairs, by="Gene_Pair")
+
+#this object includes all the gene pairs, including both expressed and not expressed ones
+early_maturation_expression_type_final_all<-left_join(duplicated_gene_pairs,early_maturation_expression_type_final, by="Gene_Pair")
+early_maturation_expression_type_final_all$expression_type[is.na(early_maturation_expression_type_final_all$expression_type)] <- "not_expressed"
+
+
+early_maturation_summary_expression_duplication <- early_maturation_expression_type_final_all %>%
+  group_by(duplication_status.x,expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(duplication_status.x) %>%
+  mutate(percentage = count / sum(count))
+
+
+early_maturation_summary_duplication <- early_maturation_expression_type_final_all %>%
+  group_by(expression_type,duplication_status.x) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count / sum(count))
+
+
+early_maturation_summary_expression <- early_maturation_expression_type_final_all %>%
+  group_by(expression_type) %>%
+  summarise(count = n(), .groups = 'drop')  %>%
+  group_by(expression_type) %>%
+  mutate(percentage = count /59351)
+
+write.csv(early_maturation_expression_type_final_all , "presentation_early_maturation_expression_type_final_all.csv")
+```
+
+#################################################################################################################################
+# the following step is to filter out the gene expressed in the mono-expressed pattern
+# in this way, we can obtain the information whether the same or different genes mono-expressed within the same gene pair across different tissues. 
+
+
+```{r overlap early nodule situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+early_nodule_filter_expression<-read.csv("07152025_expressed_early_nodul_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+early_nodule_filter_one_express_expression<-early_nodule_filter_expression[early_nodule_filter_expression$Gene_Pair %in%  early_nodule_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+early_nodule_one_express_expressed_paralog <- early_nodule_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+early_nodule_filter_one_expression_expressed<-unique(early_nodule_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+early_nodule_filter_one_expression_expressed<-left_join(early_nodule_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_early_nodule_filter_one_expression_summary <- early_nodule_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+```
+
+
+```{r overlap cotyledon situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+cotyledon_filter_expression<-read.csv("07152025_expressed_cotyledon_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+cotyledon_filter_one_express_expression<-cotyledon_filter_expression[cotyledon_filter_expression$Gene_Pair %in%  cotyledon_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+cotyledon_one_express_expressed_paralog <- cotyledon_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+cotyledon_filter_one_expression_expressed<-unique(cotyledon_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+cotyledon_filter_one_expression_expressed<-left_join(cotyledon_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_cotyledon_filter_one_expression_summary <- cotyledon_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+
+```
+
+
+```{r overlap heart situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+heart_filter_expression<-read.csv("07152025_expressed_heart_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+heart_filter_one_express_expression<-heart_filter_expression[heart_filter_expression$Gene_Pair %in%  heart_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+heart_one_express_expressed_paralog <- heart_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+heart_filter_one_expression_expressed<-unique(heart_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+heart_filter_one_expression_expressed<-left_join(heart_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_heart_filter_one_expression_summary <- heart_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+
+```
+
+
+```{r overlap globular situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+globular_filter_expression<-read.csv("07152025_expressed_globular_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+globular_filter_one_express_expression<-globular_filter_expression[globular_filter_expression$Gene_Pair %in%  globular_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+globular_one_express_expressed_paralog <- globular_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+globular_filter_one_expression_expressed<-unique(globular_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+globular_filter_one_expression_expressed<-left_join(globular_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_globular_filter_one_expression_summary <- globular_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+
+```
+
+
+```{r overlap hypocotyl situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+hypocotyl_filter_expression<-read.csv("07152025_expressed_hypocotyl_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+hypocotyl_filter_one_express_expression<-hypocotyl_filter_expression[hypocotyl_filter_expression$Gene_Pair %in%  hypocotyl_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+hypocotyl_one_express_expressed_paralog <- hypocotyl_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+hypocotyl_filter_one_expression_expressed<-unique(hypocotyl_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+hypocotyl_filter_one_expression_expressed<-left_join(hypocotyl_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_hypocotyl_filter_one_expression_summary <- hypocotyl_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+
+```
+
+
+```{r overlap root situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+root_filter_expression<-read.csv("07152025_expressed_root_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+root_filter_one_express_expression<-root_filter_expression[root_filter_expression$Gene_Pair %in%  root_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+root_one_express_expressed_paralog <- root_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+root_filter_one_expression_expressed<-unique(root_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+root_filter_one_expression_expressed<-left_join(root_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_root_filter_one_expression_summary <- root_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+
+```
+
+
+```{r overlap early_maturation situation}
+#load the normalized gene expression of gene pairs across different cell types within the tissue, this is the normalized data 
+early_maturation_filter_expression<-read.csv("07152025_expressed_early_maturation_filtere_pairs_expression_separated_raw.csv")
+
+#extract the raw expression of these gene pairs, one expressed while the other not
+early_maturation_filter_one_express_expression<-early_maturation_filter_expression[early_maturation_filter_expression$Gene_Pair %in%  early_maturation_filter_one_express$Gene_Pair,]
+
+# this step is to extract the information of the genes expressed in the gene pair one expressed and the other not. The expression data includes multiple cell type gene expression information 
+early_maturation_one_express_expressed_paralog <- early_maturation_filter_one_express_expression %>%
+  group_by(Gene_Pair) %>%
+  summarise(
+    Gene1 = Gene1,  # Keep Gene1 and Gene2 information
+    Gene2 = Gene2,
+    Avg_Gene1 = mean(Gene1_Replicate_1),
+    Avg_Gene2 = mean(Gene2_Replicate_1),
+    expressed = ifelse(mean(Gene1_Replicate_1) > mean(Gene2_Replicate_1), Gene1, Gene2),
+    .groups = "drop"
+  )
+
+#obtain the average values for each gene pair 
+early_maturation_filter_one_expression_expressed<-unique(early_maturation_one_express_expressed_paralog)
+
+#add the gene pair information with the duplication status
+early_maturation_filter_one_expression_expressed<-left_join(early_maturation_filter_one_expression_expressed, duplicated_gene_pairs, by ="Gene_Pair")
+
+#summarize the gene pair based on duplication status 
+duplication_early_maturation_filter_one_expression_summary <- early_maturation_filter_one_expression_expressed %>%
+  count(duplication_status)
+
+
+```
+
+
+```{r write the mono-expression}
+
+write.csv(early_maturation_filter_one_expression_expressed, "early_maturation_filter_one_expression_expressed.csv")
+write.csv(early_nodule_filter_one_expression_expressed, "early_nodule_filter_one_expression_expressed.csv")
+write.csv(root_filter_one_expression_expressed, "root_filter_one_expression_expressed.csv")
+write.csv(cotyledon_filter_one_expression_expressed, "cotyledon_filter_one_expression_expressed.csv")
+write.csv(hypocotyl_filter_one_expression_expressed, "hypocotyl_filter_one_expression_expressed.csv")
+write.csv(heart_filter_one_expression_expressed, "heart_filter_one_expression_expressed.csv")
+write.csv(globular_filter_one_expression_expressed, "globular_filter_one_expression_expressed.csv")
+
+```
+
+```{r combine all information}
+
+merge_early_maturation_expression_type_final_duplication<-early_maturation_expression_type_final_all[,c(7,6,14)]
+colnames(merge_early_maturation_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_early_maturation")
+
+merge_root_expression_type_final_duplication<-root_expression_type_final_all[,c(7,6,14)]
+colnames(merge_root_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_root")
+
+merge_hypocotyl_expression_type_final_duplication<-hypocotyl_expression_type_final_all[,c(7,6,14)]
+colnames(merge_hypocotyl_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_hypocotyl")
+
+merge_early_nodule_expression_type_final_duplication<-early_nodule_expression_type_final_all[,c(7,6,14)]
+colnames(merge_early_nodule_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_early_nodule")
+
+merge_heart_expression_type_final_duplication<-heart_expression_type_final_all[,c(7,6,14)]
+colnames(merge_heart_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_heart")
+
+merge_cotyledon_expression_type_final_duplication<-cotyledon_expression_type_final_all[,c(7,6,14)]
+colnames(merge_cotyledon_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_cotyledon")
+
+merge_globular_expression_type_final_duplication<-globular_expression_type_final_all[,c(7,6,14)] 
+colnames(merge_globular_expression_type_final_duplication) <-c("Gene_Pair","Duplication_status","expression_type_globular")
+
+
+#merge all the expression type across 7 different tissue types 
+dfs <- list(merge_cotyledon_expression_type_final_duplication,merge_early_maturation_expression_type_final_duplication,merge_early_nodule_expression_type_final_duplication,merge_globular_expression_type_final_duplication, merge_heart_expression_type_final_duplication,merge_hypocotyl_expression_type_final_duplication, merge_root_expression_type_final_duplication)
+
+
+combined_df <- reduce(dfs, full_join, by = "Gene_Pair")
+combined_expression_patterns<-combined_df[,c(1,2,3,5,7,9,11,13,15)]
+write.csv(combined_expression_patterns, "07152025_combined_expression_patterns.csv")
+
+
+variables <- c(
+  "not_expressed", "others", "mono-expressed",
+  "dosage_balance", "paralogue_dominance", "diverged", "specialized"
+)
+
+# Count occurrences of each variable in each row
+counts_df <- combined_expression_patterns %>%
+  rowwise() %>%
+  mutate(
+    not_expressed_count = sum(c_across(starts_with("expression_type")) == "not_expressed"),
+    others_count = sum(c_across(starts_with("expression_type")) == "others"),
+    mono_expressed_count = sum(c_across(starts_with("expression_type")) == "mono_expressed"),
+    dosage_balance_count = sum(c_across(starts_with("expression_type")) == "dosage_balance"),
+    paralogue_dominance_count = sum(c_across(starts_with("expression_type")) == "paralogue_dominance"),
+    diverged_count = sum(c_across(starts_with("expression_type")) == "diverged"),
+    specialized_count = sum(c_across(starts_with("expression_type")) == "specialized")
+  ) %>%
+  ungroup()
+
+#write.csv(counts_df,"gene_pair_expression_counts.csv")
+# Summarize unique combinations and their frequencies
+summary_df <- counts_df %>%
+  mutate(combination = paste(
+    not_expressed_count, others_count, mono_expressed_count,
+    dosage_balance_count, paralogue_dominance_count, diverged_count,
+    specialized_count, sep = "_"
+  )) %>%
+  count(combination, name = "frequency")  # Count the occurrences of each combination
+
+
+#order the summary_df by the frequncy
+summary_df <- summary_df[order(-summary_df$frequency), ]
+
+write.csv(summary_df, "07152025_gene_expression_type_across_tissues_summary.csv")
+
+```
+
+
+```{r some plots}
+# Select the top 109 rows since their counts greater than 100 
+top_86 <- head(summary_df, 86)
+
+#make the plots for these top 86 occurance 
+ggplot(top_86, aes(x = reorder(combination, -frequency), y = frequency)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +  # Flip axes for better readability
+  labs(
+    x = "Combinations of Variable Counts",
+    y = "Frequency",
+    title = "Frequency of Unique Combinations of Variable Counts"
+  ) +
+  theme_minimal()
+
+# View the summarized data
+head(summary_df)
+
+
+#the following are the methods to visualize the complete results using bar plot and heatmap
+
+# Bar plot of unique combinations
+ggplot(summary_df, aes(x = reorder(combination, -frequency), y = frequency)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +  # Flip axes for better readability
+  labs(
+    x = "Combinations of Variable Counts",
+    y = "Frequency",
+    title = "Frequency of Unique Combinations of Variable Counts"
+  ) +
+  theme_minimal()
+
+write.csv(counts_df,"counts_df.csv")
+```
+
+```{r further research on duplication events}
+summary_df_combination <- counts_df %>%
+  mutate(combination = paste(
+    not_expressed_count, others_count, mono_expressed_count,
+    dosage_balance_count, paralogue_dominance_count, diverged_count,
+    specialized_count, sep = "_"
+  )) %>%
+  group_by(combination) %>%
+  count(Duplication_status.x) %>%
+  spread(Duplication_status.x, n, fill = 0) %>%
+  mutate(total_count = WGD + TD + PD + DSD + TRD)
+  
+write.csv(summary_df_combination,"07152025_summary_df_combination.csv")
+  
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -1,0 +1,284 @@
+---
+title: "characterize_duplicated_gene_pairs"
+output: html_document
+date: "2024-12-13"
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(ggalluvial)
+library(ggpubr)
+```
+
+```{r early nodule}
+early_nodule<-read.csv("presentation_early_nodule_expression_type_final_all.csv")
+
+# Count occurrences of each category
+early_nodule_dup_counts <- early_nodule %>% count(duplication_status.x)
+early_nodule_expr_counts <- early_nodule %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+early_nodule_combined_counts <- table(early_nodule$duplication_status.x, early_nodule$expression_type)
+early_nodule_combined_df <- as.data.frame(early_nodule_combined_counts)
+colnames(early_nodule_combined_df) <- c("duplication_status", "expression_type", "count")
+
+
+# reshape data to wide format
+wide_early_nodule_combined_df <- early_nodule_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "cotyledon stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_early_nodule_combined_df <- wide_early_nodule_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "cotyledon stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_early_nodule_combined_df))
+
+# combine and print
+final_df_early_nodule_combined_df <- bind_rows(wide_early_nodule_combined_df, total_row_early_nodule_combined_df)
+
+# write to CSV
+write_csv(final_df_early_nodule_combined_df, "formatted_final_df_early_nodule_combined_df.csv")
+
+# View
+print(final_df_early_nodule_combined_df)
+
+```
+
+```{r cotyledon}
+cotyledon<-read.csv("presentation_cotyledon_expression_type_final_all.csv")
+
+# Count occurrences of each category
+cotyledon_dup_counts <- cotyledon %>% count(duplication_status.x)
+cotyledon_expr_counts <- cotyledon %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+cotyledon_combined_counts <- table(cotyledon$duplication_status.x, cotyledon$expression_type)
+cotyledon_combined_df <- as.data.frame(cotyledon_combined_counts)
+colnames(cotyledon_combined_df) <- c("duplication_status", "expression_type", "count")
+
+
+# reshape data to wide format
+wide_cotyledon_combined_df <- cotyledon_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "cotyledon stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_cotyledon_combined_df <- wide_cotyledon_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "cotyledon stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_cotyledon_combined_df))
+
+# combine and print
+final_df_cotyledon_combined_df <- bind_rows(wide_cotyledon_combined_df, total_row_cotyledon_combined_df)
+
+# write to CSV
+write_csv(final_df_cotyledon_combined_df, "formatted_final_df_cotyledon_combined_df.csv")
+
+# View
+print(final_df_cotyledon_combined_df)
+```
+
+```{r globular}
+
+globular<-read.csv("presentation_globular_expression_type_final_all.csv")
+
+# Count occurrences of each category
+globular_dup_counts <- globular %>% count(duplication_status.x)
+globular_expr_counts <- globular %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+globular_combined_counts <- table(globular$duplication_status.x, globular$expression_type)
+globular_combined_df <- as.data.frame(globular_combined_counts)
+colnames(globular_combined_df) <- c("duplication_status", "expression_type", "count")
+
+# reshape data to wide format
+wide_globular_combined_df <- globular_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "globular stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_globular_combined_df <- wide_globular_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "globular stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_globular_combined_df))
+
+# combine and print
+final_df_globular_combined_df <- bind_rows(wide_globular_combined_df, total_row_globular_combined_df)
+
+# write to CSV
+write_csv(final_df_globular_combined_df, "formatted_final_df_globular_combined_df.csv")
+
+# View
+print(final_df_globular_combined_df)
+```
+
+
+```{r heart}
+
+heart<-read.csv("presentation_heart_expression_type_final_all.csv")
+
+# Count occurrences of each category
+heart_dup_counts <- heart %>% count(duplication_status.x)
+heart_expr_counts <- heart %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+heart_combined_counts <- table(heart$duplication_status.x, heart$expression_type)
+heart_combined_df <- as.data.frame(heart_combined_counts)
+colnames(heart_combined_df) <- c("duplication_status", "expression_type", "count")
+
+# reshape data to wide format
+wide_heart_combined_df <- heart_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "heart stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_heart_combined_df <- wide_heart_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "heart stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_heart_combined_df))
+
+# combine and print
+final_df_heart_combined_df <- bind_rows(wide_heart_combined_df, total_row_heart_combined_df)
+
+# write to CSV
+write_csv(final_df_heart_combined_df, "formatted_final_df_heart_combined_df.csv")
+
+# View
+print(final_df_heart_combined_df)
+```
+
+```{r hypocotyl}
+
+hypocotyl<-read.csv("presentation_hypocotyl_expression_type_final_all.csv")
+
+# Count occurrences of each category
+hypocotyl_dup_counts <- hypocotyl %>% count(duplication_status.x)
+hypocotyl_expr_counts <- hypocotyl %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+hypocotyl_combined_counts <- table(hypocotyl$duplication_status.x, hypocotyl$expression_type)
+hypocotyl_combined_df <- as.data.frame(hypocotyl_combined_counts)
+colnames(hypocotyl_combined_df) <- c("duplication_status", "expression_type", "count")
+
+# reshape data to wide format
+wide_hypocotyl_combined_df <- hypocotyl_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "hypocotyl stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_hypocotyl_combined_df <- wide_hypocotyl_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "hypocotyl stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_hypocotyl_combined_df))
+
+# combine and print
+final_df_hypocotyl_combined_df <- bind_rows(wide_hypocotyl_combined_df, total_row_hypocotyl_combined_df)
+
+# write to CSV
+write_csv(final_df_hypocotyl_combined_df, "formatted_final_df_hypocotyl_combined_df.csv")
+
+# View
+print(final_df_hypocotyl_combined_df)
+```
+
+
+```{r early_maturation}
+
+early_maturation<-read.csv("presentation_early_maturation_expression_type_final_all.csv")
+
+# Count occurrences of each category
+early_maturation_dup_counts <- early_maturation %>% count(duplication_status.x)
+early_maturation_expr_counts <- early_maturation %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+early_maturation_combined_counts <- table(early_maturation$duplication_status.x, early_maturation$expression_type)
+early_maturation_combined_df <- as.data.frame(early_maturation_combined_counts)
+colnames(early_maturation_combined_df) <- c("duplication_status", "expression_type", "count")
+
+# reshape data to wide format
+wide_early_maturation_combined_df <- early_maturation_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "early_maturation stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_early_maturation_combined_df <- wide_early_maturation_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "early_maturation stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_early_maturation_combined_df))
+
+# combine and print
+final_df_early_maturation_combined_df <- bind_rows(wide_early_maturation_combined_df, total_row_early_maturation_combined_df)
+
+# write to CSV
+write_csv(final_df_early_maturation_combined_df, "formatted_final_df_early_maturation_combined_df.csv")
+
+# View
+print(final_df_early_maturation_combined_df)
+```
+
+```{r root}
+
+root<-read.csv("presentation_root_expression_type_final_all.csv")
+
+# Count occurrences of each category
+root_dup_counts <- root %>% count(duplication_status.x)
+root_expr_counts <- root %>% count(expression_type)
+
+# Create a contingency table for combined analysis
+root_combined_counts <- table(root$duplication_status.x, root$expression_type)
+root_combined_df <- as.data.frame(root_combined_counts)
+colnames(root_combined_df) <- c("duplication_status", "expression_type", "count")
+
+# reshape data to wide format
+wide_root_combined_df <- root_combined_df %>%
+  pivot_wider(names_from = expression_type, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  rename(`Duplication mechanisms` = duplication_status) %>%
+  mutate(Tissue = "root stage seed") %>%
+  select(Tissue, `Duplication mechanisms`, mono_expressed, not_expressed,
+         dosage_balance, paralogue_dominance, specialized, diverged, others)
+
+# add total row
+total_row_root_combined_df <- wide_root_combined_df %>%
+  summarise(across(mono_expressed:others, sum)) %>%
+  mutate(Tissue = "root stage seed", `Duplication mechanisms` = "total") %>%
+  select(names(wide_root_combined_df))
+
+# combine and print
+final_df_root_combined_df <- bind_rows(wide_root_combined_df, total_row_root_combined_df)
+
+# write to CSV
+write_csv(final_df_root_combined_df, "formatted_final_df_root_combined_df.csv")
+
+# View
+print(final_df_root_combined_df)
+```
+
