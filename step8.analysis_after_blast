@@ -1,1 +1,14 @@
+### step1. extract the blast information from the blasted result ###
 
+#input_files:
+07102025_acr_blast.tsv
+07182025_combined_blast_output.txt
+
+#output_files:
+07182025_combined_blast_reformed.out
+
+#script:
+blast_extract_bed_files_0113.py
+
+#commend:
+python blast_extract_bed_files_0113.py 07182025_combined_blast_output.txt 07102025_acr_blast.tsv 07182025_combined_blast_reformed.out
