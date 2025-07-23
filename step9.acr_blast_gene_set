@@ -1,0 +1,57 @@
+### step1.generate the reference regions for BLAST###
+
+#input_files:
+glyma_sorted.gff (original_file)
+07182025_Duplicated_genes_set_unique.csv 
+#generated from the R.script 07182025soybean_duplicated_genes_sets.Rmd using 07182025_duplicated_gene_pairs_set.csv as input, just merge the duplicated genes from each pair within each fam and then remove the duplicates. 
+
+#output_file: 
+07182025_set_gene_neighbors.csv
+
+#script: 
+query_search_genes_v1.py
+
+#commend: 
+python query_search_genes_v1 glyma_sorted.gff 07182025_Duplicated_genes_set_unique.csv  07182025_set_gene_neighbors.csv
+
+
+### step2.generate the acr_blast.tsv file in cluster###
+#input_files:
+07102025_ACR2genes.csv 
+07182025_duplicated_gene_pairs_set_blast.csv (just the two columns of "Duplicate.1" and "Duplicate.2" from the 07182025_duplicated_gene_pairs_set.csv)
+07182025_set_gene_neighbors.csv
+
+#output_files:
+07182025_set_acr_blast.tsv
+
+#script:
+blast.3.py
+#the main difference between blast.3.y and blast.2.y is the format of the inputs. 
+
+#commend 
+python blast.3.py 07102025_ACR2genes.csv 07182025_duplicated_gene_pairs_set_blast.csv 07182025_set_gene_neighbors.csv 07182025_set_acr_blast.tsv
+
+######################################################################################################################
+mannually check and revise for the situation that the upstream or downstream gene is the first or last gene in the chromosome
+######################################################################################################################
+
+
+### step3.generate the reference_regions.tsv files that includes the clean version of the coordinates of ACRs and the coordinates of the corresponding reference  ###
+
+#input_file:07182025_set_acr_blast.tsv
+
+#output_file:07182025_set_reference_regions.tsv
+
+#scripts:
+config.yaml 
+extract_coords.py
+snakemake.file 
+
+#commend: snakemake -prs snakemake.file  --profile /home/xl20359/.config/snakemake/batchsub/
+
+
+### step4.perform the blast using snakemake. 
+
+07182025_set_acr_blast.tsv
+07182025_set_reference_regions.tsv
+0718_snakemake.1
