@@ -38,7 +38,6 @@ mannually check and revise for the situation that the upstream or downstream gen
 ######################################################################################################################
 
 
-
 ### step 3. generate the reference_regions.tsv files that includes the clean version of the coordinates of ACRs and the coordinates of the corresponding reference  ###
 
 #input_file:07102025_acr_blast.tsv
@@ -51,6 +50,7 @@ extract_coords.py
 snakemake.file 
 
 #commend: snakemake -prs snakemake.file  --profile /home/xl20359/.config/snakemake/batchsub/
+
 
 ### step4. split the files of the acr and the reference regions due to the large amount of ACRs can be hard to be combined ###
 #input_file:
