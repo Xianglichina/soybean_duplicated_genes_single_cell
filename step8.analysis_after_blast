@@ -12,3 +12,20 @@ blast_extract_bed_files_0113.py
 
 #commend:
 python blast_extract_bed_files_0113.py 07182025_combined_blast_output.txt 07102025_acr_blast.tsv 07182025_combined_blast_reformed.out
+
+
+### step2. analyze the reformed.out in R ###
+#input_files:
+07042025_glyma_duplicated_pairs.csv	(gene pairs identified at the first step)
+07102025_acr_blast.tsv (reference files for BLAST)
+0710_matching_acr_count.tsv	(read counts for ACRs across different cell types across tissues, ensuring that the cell types consistent with the ones used in the RNA-seq)	
+07182025_combined_blast_reformed.out (generated in the above step)
+
+#0710_matching_acr_count.tsv was generated using the script (07102025_ACR_associated_genes.Rmd), the input (Gm_atlas_All_tissue_ACR_4cpm_celltype_counts.txt)
+
+#script: 0722_updated_ACRs_cotyledon.Rm
+
+#output_file:
+07222025_blasted_acr_filter_cotyledon_summary_avg.csv
+
+
