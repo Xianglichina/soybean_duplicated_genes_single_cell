@@ -9,6 +9,7 @@ Conduct correlation test between the two replicates using Spearman test. Only ke
 
 ### step 2. normalize the gene count ###
 This pseudo bulk single cell data can be treated as nromal bulk data
+filter out the cell types that are not included in the ATACs-seq data to maintain the consistence of cell types within each tissue type 
 normalize the genes across different cell types within the same tissue and filtered the lowly expressed genes 
 
 #input_file: early_maturation_reorder.csv
