@@ -1,6 +1,6 @@
 step2.identify duplicated gene sets 
 
-download the files with the information of duplicated genes with shared origin within legume family
+download the files with the information of duplicated genes with shared origin within legume family (from soybase)
 
 legume.fam3.VLMQ.sup1A_hsh.tsv
 #this file listed each gene family and the gene id across all legume species 
