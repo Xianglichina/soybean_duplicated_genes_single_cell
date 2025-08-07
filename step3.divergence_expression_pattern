@@ -51,17 +51,28 @@ early_maturation_paralog_pair_coexpression.csv
 The NA in the sheet should be the pairs that with one gene expressed but the others not. 
 
 ### step 8. characterize the expression of gene pairs ###
-#aim1:summarize different types of expression within each tissues types
+##aim1:summarize different types of expression within each tissues types.##
 [category1] mono-expressed
 [category2] dosage balance
 [category3] paralogue dominance
 [category4] specialized
 [category5] diverged
 
-#aim2:figure out the gene pair with mono-expressed pattern, which gene is expressed and which gene is not. 
 
-#aim3:combine the expression pattern across tissue types for each gene pair for further across tissue analyese. 
+##aim2:figure out the gene pair with mono-expressed pattern, which gene is expressed and which gene is not.##
+#output files:
+write.csv(early_maturation_filter_one_expression_expressed, "early_maturation_filter_one_expression_expressed.csv")
+write.csv(early_nodule_filter_one_expression_expressed, "early_nodule_filter_one_expression_expressed.csv")
+write.csv(root_filter_one_expression_expressed, "root_filter_one_expression_expressed.csv")
+write.csv(cotyledon_filter_one_expression_expressed, "cotyledon_filter_one_expression_expressed.csv")
+write.csv(hypocotyl_filter_one_expression_expressed, "hypocotyl_filter_one_expression_expressed.csv")
+write.csv(heart_filter_one_expression_expressed, "heart_filter_one_expression_expressed.csv")
+write.csv(globular_filter_one_expression_expressed, "globular_filter_one_expression_expressed.csv")
 
+##aim3:combine the expression pattern across tissue types for each gene pair for further across tissue analyese.##
+#output files:
+write.csv(combined_expression_patterns, "07152025_combined_expression_patterns.csv")
+write.csv(summary_df, "07152025_gene_expression_type_across_tissues_summary.csv")
 
 #input_file:
 early_nodule_filter_paralog_pair_coexpression_fold_change.csv
@@ -76,6 +87,10 @@ presentation_early_nodule_expression_type_final_all.csv
 #script (generate the supplementary table for summarizing the expression patterns withiin the tissues) 
 0715_summary_expression_types_within_tissues.Rmd
 
+
+
+###################################################################################################
+delete the things below 
 ########## divergent gene expression analysis across tissues ##########
 #load the combined expression patterns across tissue for each gene pair
 #calculate the expression stability across stages or across tissues 
