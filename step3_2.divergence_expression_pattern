@@ -24,6 +24,18 @@ step1.replace_mono_expressed.py
 python step1.replace_mono_expressed.py 07152025_combined_expression_patterns.csv cotyledon_filter_one_expression_expressed.csv early_nodule_filter_one_expression_expressed.csv early_maturation_filter_one_expression_expressed.csv globular_filter_one_expression_expressed.csv heart_filter_one_expression_expressed.csv hypocotyl_filter_one_expression_expressed.csv root_filter_one_expression_expressed.csv 0808_combined_mono_expressed_patterns.
 csv
 
+###step2. summarize whether the same or different expressed genes in mono_expressed gene pairs across tissues### 
+#input_files:
+0808_combined_mono_expressed_patterns.csv
+
+#output_files:
+0808_summary_mono_expressed.csv
+
+#script:
+step2.summary_mono.py
+
+#commend:
+python step2.summary_mono.py 0808_combined_mono_expressed_patterns.csv 0808_summary_mono_expressed.csv
 
 
 
