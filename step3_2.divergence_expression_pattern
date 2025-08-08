@@ -37,24 +37,12 @@ step2.summary_mono.py
 #commend:
 python step2.summary_mono.py 0808_combined_mono_expressed_patterns.csv 0808_summary_mono_expressed.csv
 
+###step3. make the plots for the distribution of mono_expressed gene pairs with the same or different gene expressed across tissues### 
+#input_files:
+0808_summary_mono_expressed.csv
 
+#output_file:
+plot_mono_expression_across_tissues.pdf
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-part2:conduct the expression stability analyese 
+#script:
+step3.mono_expression_7_tissue.Rmd
