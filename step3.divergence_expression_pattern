@@ -51,13 +51,30 @@ early_maturation_paralog_pair_coexpression.csv
 The NA in the sheet should be the pairs that with one gene expressed but the others not. 
 
 ### step 8. characterize the expression of gene pairs ###
+#input_file:
+early_nodule_filter_paralog_pair_coexpression_fold_change.csv
+07042025_glyma_duplicated_pairs.csv
+
+#script:
+0715_charaterization_gene_pair_expression_within_tissue.Rmd
+
+#script (generate the supplementary table for summarizing the expression patterns withiin the tissues) 
+0715_summary_expression_types_within_tissues.Rmd
+
 ##aim1:summarize different types of expression within each tissues types.##
 [category1] mono-expressed
 [category2] dosage balance
 [category3] paralogue dominance
 [category4] specialized
 [category5] diverged
-
+#output files:
+presentation_early_nodule_expression_type_final_all.csv
+presentation_cotyledon_expression_type_final_all.csv
+presentation_heart_expression_type_final_all.csv
+presentation_globular_expression_type_final_all.csv
+presentation_hypocotyl_expression_type_final_all.csv
+presentation_root_expression_type_final_all.csv
+presentation_early_maturation_expression_type_final_all.csv
 
 ##aim2:figure out the gene pair with mono-expressed pattern, which gene is expressed and which gene is not.##
 #output files:
@@ -73,20 +90,6 @@ write.csv(globular_filter_one_expression_expressed, "globular_filter_one_express
 #output files:
 write.csv(combined_expression_patterns, "07152025_combined_expression_patterns.csv")
 write.csv(summary_df, "07152025_gene_expression_type_across_tissues_summary.csv")
-
-#input_file:
-early_nodule_filter_paralog_pair_coexpression_fold_change.csv
-07042025_glyma_duplicated_pairs.csv
-
-#output_file: 
-presentation_early_nodule_expression_type_final_all.csv
-
-#script:
-0715_charaterization_gene_pair_expression_within_tissue.Rmd
-
-#script (generate the supplementary table for summarizing the expression patterns withiin the tissues) 
-0715_summary_expression_types_within_tissues.Rmd
-
 
 
 ###################################################################################################
