@@ -46,3 +46,42 @@ plot_mono_expression_across_tissues.pdf
 
 #script:
 step3.mono_expression_7_tissue.Rmd
+
+##########################################################################################################################################
+part2:stability score calculation across stages and across tissues.
+##########################################################################################################################################
+#input_file:
+07152025_combined_expression_patterns.csv
+
+#output_files:
+write.csv(stability_scores_full, "07292025_stability_scores_full.csv")
+write.csv(stage_summary,"08022025_stage_summary.csv")
+write.csv(tissue_summary,"08022025_tissue_summary.csv")
+write.csv(core_stages_dup,"08022025_stage_dup_summary.csv")
+write.csv(core_tissues_dup,"08022025_tissue_dup_summary.csv")
+
+#script:
+08052025_expression_stability.Rmd
+
+#across tissues and across stages
+stage_cols <- c("expression_type_cotyledon", "expression_type_early_maturation",
+                "expression_type_globular", "expression_type_heart")
+tissue_cols <- c("expression_type_hypocotyl", "expression_type_root", "expression_type_early_nodule","expression_type_heart")
+
+#consolidated expression patterns 
+pattern_map <- c(
+  "dosage_balance" = "correlated_expression",
+  "paralogue_dominance" = "correlated_expression",
+  "specialized" = "correlated_expression",
+  "diverged" = "uncorrelated_expression",
+  "others" = "uncorrelated_expression",
+  "mono_expressed" = "mono_expression",
+  "not_expressed" = "non_expression"
+)
+
+
+
+
+
+
+
