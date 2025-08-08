@@ -1,1 +1,48 @@
+##########################################################################################################################################
+part1:figure out the consistence of the genes expressed in mono-expressed gene pairs across tissues.
+##########################################################################################################################################
+###step1. filter mono_expressed as the gene ID for the gene expressed in the mono-expressed gene pair### 
+#input files
+07152025_combined_expression_patterns.csv (combined expression patterns across tissues)
 
+(The following are the expressed genes in mono-expressed gene pairs for each tissue)
+cotyledon_filter_one_expression_expressed.csv 
+early_maturation_filter_one_expression_expressed.csv
+early_nodule_filter_one_expression_expressed.csv
+globular_filter_one_expression_expressed.csv
+heart_filter_one_expression_expressed.csv
+hypocotyl_filter_one_expression_expressed.csv
+root_filter_one_expression_expressed.csv
+
+#output_files:
+0808_combined_mono_expressed_patterns.csv
+
+#script: 
+step1.replace_mono_expressed.py
+
+#commend:
+python step1.replace_mono_expressed.py 07152025_combined_expression_patterns.csv cotyledon_filter_one_expression_expressed.csv early_nodule_filter_one_expression_expressed.csv early_maturation_filter_one_expression_expressed.csv globular_filter_one_expression_expressed.csv heart_filter_one_expression_expressed.csv hypocotyl_filter_one_expression_expressed.csv root_filter_one_expression_expressed.csv 0808_combined_mono_expressed_patterns.
+csv
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+part2:conduct the expression stability analyese 
