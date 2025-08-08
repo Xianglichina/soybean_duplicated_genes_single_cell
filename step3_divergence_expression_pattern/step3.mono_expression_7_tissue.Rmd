@@ -1,0 +1,68 @@
+---
+title: "summary_mono_expression"
+output: html_document
+date: "2025-02-17"
+---
+```{r plot}
+# Load necessary packages
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Read the CSV file (adjust the path as needed)
+data <- read.csv("0808_summary_mono_expressed.csv")
+
+# Clean the 'same' column to ensure it has only "True" and "False" values.
+data$same <- as.character(data$same)  # Convert to character to clean
+data$same[data$same != "True" & data$same != "False"] <- NA  # Set any other values to NA
+data$same <- factor(data$same, levels = c("True", "False"))
+
+# Summarize the data by grouping by 'count' and summarizing the 'same' column.
+summary_data <- data %>%
+  group_by(count) %>%
+  summarize(
+    True_count = sum(same == "True", na.rm = TRUE),
+    False_count = sum(same == "False", na.rm = TRUE)
+  )
+
+# Reshape the summary data from wide to long format for plotting
+summary_long <- summary_data %>%
+  pivot_longer(cols = c(True_count, False_count),
+               names_to = "same",
+               values_to = "occurrences")
+
+# Remove rows with occurrences equal to 0
+summary_long <- summary_long %>%
+  filter(occurrences > 0)
+
+# Define color palette for publication style (subtle colors)
+colors <- c("True_count" = "#1f77b4", "False_count" = "#ff7f0e")
+
+# Create a polished, publication-style plot
+plot <- ggplot(summary_long, aes(x = factor(count), y = occurrences, fill = same)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  scale_fill_manual(values = colors) +
+  labs(x = "Count Group",
+       y = "Number of Occurrences",
+       fill = "Same Value",
+       title = "Distribution of 'Same' Values by Count Group") +
+  theme_minimal(base_size = 14) +  # Set base font size
+  theme(
+    axis.text = element_text(size = 12),       # Axis labels size
+    axis.title = element_text(size = 14),      # Axis titles size
+    plot.title = element_text(size = 16, face = "bold"),  # Title size and bold
+    legend.title = element_text(size = 14),    # Legend title size
+    legend.text = element_text(size = 12),     # Legend text size
+    panel.grid.major = element_blank(),        # Remove major gridlines
+    panel.grid.minor = element_blank(),        # Remove minor gridlines
+    panel.border = element_blank(),            # Remove panel border
+    plot.margin = margin(10, 10, 10, 10)       # Add margin to the plot
+  )
+
+plot
+# Save the plot as a PDF file
+ggsave("plot_mono_expression_across_tissues.pdf", plot, width = 8, height = 6, dpi = 300)
+
+```
+
+Note that the `echo = False` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
