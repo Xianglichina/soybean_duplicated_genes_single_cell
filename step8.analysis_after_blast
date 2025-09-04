@@ -23,7 +23,7 @@ python blast_extract_bed_files_0113.py 07182025_combined_blast_output.txt 071020
 
 #0710_matching_acr_count.tsv was generated using the script (07102025_ACR_associated_genes.Rmd), the input (Gm_atlas_All_tissue_ACR_4cpm_celltype_counts.txt)
 
-#script: 0722_updated_ACRs_cotyledon.Rm
+#script: 0823_updated_ACRs_cotyledon.Rm
 
 #output_file:
 07222025_blasted_acr_filter_cotyledon_summary_avg.csv
