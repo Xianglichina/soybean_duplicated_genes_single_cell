@@ -1,0 +1,306 @@
+---
+title: "DE analysis"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+#load the libraries
+library("tidyverse")
+library("ggplot2")
+library("edgeR")
+```
+
+```{r load the BLASTed results}
+#load the blasted ACRs and summarize the ACR information, blasted, not blasted, blasted infor 
+blasted_acr<-read.delim2("07182025_combined_blast_reformed.out", header = TRUE)
+blasted_acr<-blasted_acr[,1:20]
+blasted_acr <-blasted_acr %>%
+  mutate(
+    query_length = abs(Query_Start - Query_End),
+    object_length = abs(Subject_Start_Pos- Subject_End_Pos),
+    percentage_alignment = object_length/query_length,
+    mismatch_rate = Mismatches/object_length,
+    blast_infor = paste(Query_Combined,ACR_associated_gene, ref_associated_gene ,sep ="_")
+  )
+
+
+p <- ggplot(blasted_acr, aes(x = percentage_alignment)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = 0.1, color = "black", linetype = "dashed", size = 1) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 14),
+    axis.title = element_text(size = 18)
+  ) +
+  labs(x = "Percentage Alignment", y = "Count")
+
+p
+# Save as PDF
+ggsave("percentage_alignment_histogram.pdf", plot = p, width = 8, height = 6, device = "pdf")
+
+#ggplot(blasted_acr, aes(x = percentage_alignment)) +
+ # geom_density(fill = "blue", alpha = 0.5)
+
+#partially blasted ACRs were with the percentage_alignment greater than 0.1 but less than 0.8 
+#blasted_acr_partial_blasted<-blasted_acr %>%
+#  filter(percentage_alignment > 0.1 & percentage_alignment < 0.8) %>%
+#  mutate(blast_type = "partially_blasted")
+
+#fully blasted ACRs were with the percentage_alignment greater or equal 0.8 
+#blasted_acr_fully_blasted <- blasted_acr %>%
+#  filter(percentage_alignment >=0.8) %>%
+#  mutate(blast_type = "fully_blasted")
+
+#combine these two types of ACRs, this is the conserved ACRs 
+#blasted_acr_filter<-rbind(blasted_acr_fully_blasted,blasted_acr_partial_blasted)
+
+blasted_acr_all <- read.delim2("07102025_acr_blast.tsv")
+blasted_acr_all <-blasted_acr_all %>%
+  mutate(blast_infor = paste(ACR, gene, matched_gene, sep ="_"))
+
+blasted_acr_all <-blasted_acr_all %>%
+  left_join(blasted_acr,by="blast_infor") %>%
+  mutate(
+    blasted_status = ifelse(is.na(Query_Chromosome), "not_blasted", "blasted"),
+    ACR_name= ACR
+  )
+
+```
+
+```{r select the ACRs in cotyledon}
+#load the ACR count data matching the gene expression cell types and normalize them 
+acr_matching_rna_raw_count<-read.delim2("0710_matching_acr_count.tsv")
+
+acr_matching_rna_raw_count<-acr_matching_rna_raw_count[,1:58]
+
+#normalize the count of ACRs 
+acr_matching_rna_normalized<-cpm(acr_matching_rna_raw_count)
+acr_matching_rna_normalized<-as.data.frame(acr_matching_rna_normalized)
+
+#select the ACRs that in cotyledon and ensure the count of ACR in at least one cell type greater than 4
+cotyledon <- acr_matching_rna_normalized %>%
+  select(starts_with("Gm_atlas_Cotyledon")) 
+
+acr_matching_rna_normalized_cotyledon <- cotyledon %>%
+  mutate(Count_Greater_Than_4 = rowSums(cotyledon > 4, na.rm = TRUE)) %>%
+  filter(Count_Greater_Than_4 > 0 ) 
+
+#add ACR name and ACR tissue, this is all the ACRs in cotyledon tissue 
+acr_matching_rna_normalized_cotyledon <- acr_matching_rna_normalized_cotyledon %>%
+  mutate(ACR_tissue = "cotyledon") %>%
+  mutate(ACR_name = rownames(acr_matching_rna_normalized_cotyledon)) %>%
+  select(ACR_tissue, ACR_name)
+
+#write.csv(acr_matching_rna_normalized_cotyledon, "acr_matching_rna_normalized_cotyledon.csv")
+```
+
+```{r cotyledon ACRs associated with duplicated gene pairs}
+#filter in the ACRs in cotyledon that have been blasted 
+blasted_acr_all_cotyledon <- blasted_acr_all %>%
+  left_join(acr_matching_rna_normalized_cotyledon, by = "ACR_name") %>%
+  filter(!is.na(ACR_tissue))
+
+#the number of ACRs in cotyledon that have been blasted, one ACRs can be blasted in different gene pairs 
+length(unique(blasted_acr_all_cotyledon$ACR_name))
+
+#connect the ACRs with gene pairs
+gene_pair<-read.csv("07042025_glyma_duplicated_pairs.csv")
+
+gene_pair <- gene_pair %>%
+  mutate(pair_id = paste0("pair_", row_number()),
+         combined = paste(duplicate_1, duplicate_2, sep = "_"))
+
+# Pivot to long format and keep combined column
+
+# Create gene pairs lookup
+gene_pairs <- gene_pair %>%
+  select(pair_id,combined,duplicate_1,duplicate_2,duplication_status)
+
+# Match ACRs to gene pairs (bidirectional)
+acr_blast_cotyledon_gene_pairs <- data.frame()
+
+# Create lookup tables for both directions
+forward_lookup <- gene_pairs %>%
+  select(pair_id, duplication_status, gene = duplicate_1, matched_gene = duplicate_2) %>%
+  mutate(match_direction = "forward")
+
+reverse_lookup <- gene_pairs %>%
+  select(pair_id, duplication_status, gene = duplicate_2, matched_gene = duplicate_1) %>%
+  mutate(match_direction = "reverse")
+
+# Combine both lookup tables
+all_lookups <- rbind(forward_lookup, reverse_lookup)
+
+# Single left_join to match ACRs
+acr_blast_cotyledon_gene_pairs <- blasted_acr_all_cotyledon %>%
+  left_join(all_lookups, by = c("gene", "matched_gene")) %>%
+  filter(!is.na(pair_id))  # Keep only matched rows
+
+
+```
+
+
+```{r ACR blast result analysis cotyledon}
+##############################################################################################################
+#this part mainly summary the situations that ACRs blast situation. 
+##############################################################################################################
+
+#summarize the blast result by each gene pair, with information like, the number of the ACRs were blasted for each gene in gene pair, whether they are partially blasted or fully blasted, and the average alignment (object_length/query_length) and the average_mismatch (mismatch/object_length)
+blasted_acr_filter_cotyledon_summary <- acr_blast_cotyledon_gene_pairs %>%
+  group_by(pair_id) %>%
+  summarize(
+    unique_genes = n_distinct(gene),
+    gene1 = unique(gene)[1],
+    gene2 = ifelse(unique_genes == 2, unique(gene)[2], NA),
+
+    gene1_count = sum(gene == gene1),
+    gene2_count = ifelse(unique_genes == 2, sum(gene == gene2), NA),
+
+    gene1_blasted_count = sum(gene == gene1 & blasted_status == "blasted", na.rm = TRUE),
+    gene1_unblasted_count = sum(gene == gene1 & blasted_status == "not_blasted", na.rm = TRUE),
+
+    gene2_blasted_count = ifelse(unique_genes == 2, sum(gene == gene2 & blasted_status == "blasted", na.rm = TRUE), NA),
+    gene2_unblasted_count = ifelse(unique_genes == 2, sum(gene == gene2 & blasted_status == "not_blasted", na.rm = TRUE), NA),
+
+    # Conserved counts and percentages at different thresholds
+    gene1_conserved_0.1 = sum(gene == gene1 & percentage_alignment > 0.1, na.rm = TRUE),
+    gene1_conserved_0.2 = sum(gene == gene1 & percentage_alignment > 0.2, na.rm = TRUE),
+    gene1_conserved_0.4 = sum(gene == gene1 & percentage_alignment > 0.4, na.rm = TRUE),
+    gene1_conserved_0.6 = sum(gene == gene1 & percentage_alignment > 0.6, na.rm = TRUE),
+    gene1_conserved_0.8 = sum(gene == gene1 & percentage_alignment > 0.8, na.rm = TRUE),
+
+    gene2_conserved_0.1 = ifelse(unique_genes == 2, sum(gene == gene2 & percentage_alignment > 0.1, na.rm = TRUE), NA),
+    gene2_conserved_0.2 = ifelse(unique_genes == 2, sum(gene == gene2 & percentage_alignment > 0.2, na.rm = TRUE), NA),
+    gene2_conserved_0.4 = ifelse(unique_genes == 2, sum(gene == gene2 & percentage_alignment > 0.4, na.rm = TRUE), NA),
+    gene2_conserved_0.6 = ifelse(unique_genes == 2, sum(gene == gene2 & percentage_alignment > 0.6, na.rm = TRUE), NA),
+    gene2_conserved_0.8 = ifelse(unique_genes == 2, sum(gene == gene2 & percentage_alignment > 0.8, na.rm = TRUE), NA),
+
+    gene1_percent_conserved_0.1 = gene1_conserved_0.1 / gene1_count,
+    gene1_percent_conserved_0.2 = gene1_conserved_0.2 / gene1_count,
+    gene1_percent_conserved_0.4 = gene1_conserved_0.4 / gene1_count,
+    gene1_percent_conserved_0.6 = gene1_conserved_0.6 / gene1_count,
+    gene1_percent_conserved_0.8 = gene1_conserved_0.8 / gene1_count,
+
+    gene2_percent_conserved_0.1 = ifelse(!is.na(gene2_count), gene2_conserved_0.1 / gene2_count, NA),
+    gene2_percent_conserved_0.2 = ifelse(!is.na(gene2_count), gene2_conserved_0.2 / gene2_count, NA),
+    gene2_percent_conserved_0.4 = ifelse(!is.na(gene2_count), gene2_conserved_0.4 / gene2_count, NA),
+    gene2_percent_conserved_0.6 = ifelse(!is.na(gene2_count), gene2_conserved_0.6 / gene2_count, NA),
+    gene2_percent_conserved_0.8 = ifelse(!is.na(gene2_count), gene2_conserved_0.8 / gene2_count, NA),
+
+    # Mean alignment and mismatch for threshold > 0.1
+    gene1_conserved_avg_alignment = mean(percentage_alignment[gene == gene1 & percentage_alignment > 0.1], na.rm = TRUE),
+    gene2_conserved_avg_alignment = ifelse(unique_genes == 2,
+                                           mean(percentage_alignment[gene == gene2 & percentage_alignment > 0.1], na.rm = TRUE), NA),
+
+    gene1_conserved_avg_mismatch = mean(mismatch_rate[gene == gene1 & percentage_alignment > 0.1], na.rm = TRUE),
+    gene2_conserved_avg_mismatch = ifelse(unique_genes == 2,
+                                          mean(mismatch_rate[gene == gene2 & percentage_alignment > 0.1], na.rm = TRUE), NA),
+
+    # Percent unblasted
+    gene1_percent_unblasted = gene1_unblasted_count / gene1_count,
+    gene2_percent_unblasted = ifelse(!is.na(gene2_count), gene2_unblasted_count / gene2_count, NA)
+  )
+
+
+
+blasted_acr_filter_cotyledon_summary_avg <- blasted_acr_filter_cotyledon_summary %>%
+  transmute(
+    pair_id,
+    cotyledon_acr_count = rowSums(cbind(gene1_count, gene2_count), na.rm = TRUE),
+    cotyledon_acr_count_dif = apply(cbind(gene1_count, gene2_count), 1, function(x) abs(diff(x))),
+
+      cotyledon_presence_status = case_when(
+      !is.na(gene1_count) & !is.na(gene2_count) ~ "both_presence",
+      xor(is.na(gene1_count), is.na(gene2_count)) ~ "one_presence",
+      is.na(gene1_count) & is.na(gene2_count) ~ "non_presence"
+    ),
+    
+    
+    cotyledon_percentage_conserved_0.1 = rowMeans(cbind(gene1_percent_conserved_0.1, gene2_percent_conserved_0.1), na.rm = TRUE),
+    cotyledon_percentage_conserved_0.2 = rowMeans(cbind(gene1_percent_conserved_0.2, gene2_percent_conserved_0.2), na.rm = TRUE),
+    cotyledon_percentage_conserved_0.4 = rowMeans(cbind(gene1_percent_conserved_0.4, gene2_percent_conserved_0.4), na.rm = TRUE),
+    cotyledon_percentage_conserved_0.6 = rowMeans(cbind(gene1_percent_conserved_0.6, gene2_percent_conserved_0.6), na.rm = TRUE),
+    cotyledon_percentage_conserved_0.8 = rowMeans(cbind(gene1_percent_conserved_0.8, gene2_percent_conserved_0.8), na.rm = TRUE),
+
+    cotyledon_percentage_unblasted = rowMeans(cbind(gene1_percent_unblasted, gene2_percent_unblasted), na.rm = TRUE),
+    cotyledon_conserved_avg_alignment = rowMeans(cbind(gene1_conserved_avg_alignment, gene2_conserved_avg_alignment), na.rm = TRUE),
+    cotyledon_conserved_avg_mismatch = rowMeans(cbind(gene1_conserved_avg_mismatch, gene2_conserved_avg_mismatch), na.rm = TRUE)
+  )
+
+cotyledon_expression <- read.csv("presentation_cotyledon_expression_type_final_all.csv") %>%
+  transmute(
+    combined = paste(duplicate_1.x, duplicate_2.x, sep = "_"),
+    expression_type,
+    duplication_status.x
+  ) %>%
+  left_join(gene_pairs, by= "combined")
+
+
+
+blasted_acr_filter_cotyledon_summary<-blasted_acr_filter_cotyledon_summary %>%
+  left_join(cotyledon_expression, by="pair_id")
+
+write.csv(blasted_acr_filter_cotyledon_summary,"08232025_blasted_acr_filter_cotyledon_summary.csv")
+
+
+
+blasted_acr_filter_cotyledon_summary_avg <- blasted_acr_filter_cotyledon_summary_avg %>%
+  left_join(cotyledon_expression, by = "pair_id")
+blasted_acr_filter_cotyledon_summary_final_expression_type <- blasted_acr_filter_cotyledon_summary_avg %>%
+  group_by(expression_type) %>%
+  summarize(
+    avg_acr_count = mean(cotyledon_acr_count, na.rm = TRUE),
+    avg_acr_count_dif = mean(cotyledon_acr_count_dif, na.rm = TRUE),
+
+    avg_percentage_conserved_0.1 = mean(cotyledon_percentage_conserved_0.1, na.rm = TRUE),
+    avg_percentage_conserved_0.2 = mean(cotyledon_percentage_conserved_0.2, na.rm = TRUE),
+    avg_percentage_conserved_0.4 = mean(cotyledon_percentage_conserved_0.4, na.rm = TRUE),
+    avg_percentage_conserved_0.6 = mean(cotyledon_percentage_conserved_0.6, na.rm = TRUE),
+    avg_percentage_conserved_0.8 = mean(cotyledon_percentage_conserved_0.8, na.rm = TRUE),
+
+    avg_percentage_unblasted = mean(cotyledon_percentage_unblasted, na.rm = TRUE),
+    avg_conserved_alignment = mean(cotyledon_conserved_avg_alignment, na.rm = TRUE),
+    avg_conserved_mismatch = mean(cotyledon_conserved_avg_mismatch, na.rm = TRUE),
+
+    fully_unblasted_count = sum(cotyledon_percentage_unblasted == 1, na.rm = TRUE),
+    total_count = n(),
+    proportion_fully_unblasted = fully_unblasted_count / total_count,
+    .groups = "drop"
+  )
+blasted_acr_filter_cotyledon_summary_final_duplication <- blasted_acr_filter_cotyledon_summary_avg %>%
+  group_by(duplication_status.x) %>%
+  summarize(
+    avg_percentage_conserved_0.1 = mean(cotyledon_percentage_conserved_0.1, na.rm = TRUE),
+    avg_percentage_conserved_0.2 = mean(cotyledon_percentage_conserved_0.2, na.rm = TRUE),
+    avg_percentage_conserved_0.4 = mean(cotyledon_percentage_conserved_0.4, na.rm = TRUE),
+    avg_percentage_conserved_0.6 = mean(cotyledon_percentage_conserved_0.6, na.rm = TRUE),
+    avg_percentage_conserved_0.8 = mean(cotyledon_percentage_conserved_0.8, na.rm = TRUE),
+
+    avg_percentage_unblasted = mean(cotyledon_percentage_unblasted, na.rm = TRUE),
+    avg_conserved_alignment = mean(cotyledon_conserved_avg_alignment, na.rm = TRUE),
+    avg_conserved_mismatch = mean(cotyledon_conserved_avg_mismatch, na.rm = TRUE),
+
+    fully_unblasted_count = sum(cotyledon_percentage_unblasted == 1, na.rm = TRUE),
+    total_count = n(),
+    proportion_fully_unblasted = fully_unblasted_count / total_count,
+    .groups = "drop"
+  )
+write.csv(blasted_acr_filter_cotyledon_summary_avg, "08232025_blasted_acr_filter_cotyledon_summary_avg.csv")
+write.csv(blasted_acr_filter_cotyledon_summary_final_expression_type, "08232025_blasted_acr_filter_cotyledon_summary_final_expression_type.csv")
+write.csv(blasted_acr_filter_cotyledon_summary_final_duplication, "08232025_blasted_acr_filter_cotyledon_summary_final_duplication.csv")
+
+cotyledon_presence_ratio_by_expression <- blasted_acr_filter_cotyledon_summary_avg %>%
+  count(expression_type, cotyledon_presence_status) %>%
+  group_by(expression_type) %>%
+  mutate(presence_ratio = n / sum(n)) %>%
+  select(-n) %>%
+  pivot_wider(
+    names_from = cotyledon_presence_status,
+    values_from = presence_ratio,
+    names_prefix = "ratio_"
+  ) %>%
+  ungroup()
+
+write.csv(cotyledon_presence_ratio_by_expression, "08232025_cotyledon_presence_ratio_by_expression.csv")
+```
