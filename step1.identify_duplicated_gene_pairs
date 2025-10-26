@@ -8,7 +8,7 @@ protien files
 the input protein files should be primary, otherwise, too many transcripts 
 
 glyma.Wm82.gnm4.ann1.T8TQ.gene_models_main.bed.gz ----> glyma.gff (change the order the columns to match the format that fits the program)
-glyma.Wm82.gnm4.ann1.T8TQ.protein_primary.faa.gz ---->glyma.pep (use the primary ones, making sure one protein sequences for each gene) 
+glyma.Wm82.gnm4.ann1.T8TQ.protein_primary.faa.gz ---->glyma.pep (use the primary ones, making sure one protein sequence for each gene) 
 
 phavu.G19833.gnm2.ann1.PB8d.gene_models_main.bed.gz ---->phavu.gff
 phavu.G19833.gnm2.ann1.PB8d.protein_primary.faa.gz ---->phavu.pep
@@ -25,7 +25,8 @@ diamond blastp -d phavu -q glyma.pep -o phavu.blast -p 20 --sensitive --max-targ
 #2. filter the blast result using R script 
 self: identity similarity > 40%, coverage > 70% 
 others: identiyty similarity > 40%, coverage > 70% 
-#######07032025_blast_filter.RMD#######
+
+script:07032025_blast_filter.RMD
 
 ### reason to choose 40% as the threshold is based on the observation of the BLAST results for the duplicated genes originating from legume family - based on the tree results. 
 
@@ -35,4 +36,4 @@ DupGen_finder.pl -i data -t glyma -c phavu -o results
 ### reason to not use unique is under the consideration that the whole genome duplicated genes can also involve in other duplicate mechanisms. 
 
 #4. run R to filter the duplicated genes not on chromosomes and summarize the duplicated gene pairs and duplicated genes 
-#######07032025soybean_duplicated_genes.RMD#######
+script:07032025soybean_duplicated_genes.RMD
