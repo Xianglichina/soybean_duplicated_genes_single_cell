@@ -1,0 +1,18 @@
+# Path to the input file containing ACR and syntenic region coordinates
+acr_syntenic_file: "/scratch/xl20359/05_soybean_revision/05.ACR_blast/acr_blast/acr_blast_Gm01_first_20000_lines.tsv"
+
+# List of species for which you want to extract sequences
+species_list:
+  - Gmax
+
+
+# Paths to the reference genome FASTA files for each species
+species_fasta:
+  Gmax: "genomes/Gmax.fasta"
+
+
+reference_regions_file: "/scratch/xl20359/05_soybean_revision/05.ACR_blast/reference_regions/reference_regions_Gm01_first_20000_lines.tsv"
+
+# Conda environments for the tools used in the Snakemake rules
+conda_envs:
+  blast_bedtools_bioawk: "envs/BlastBedtoolsBioawk.yaml"
