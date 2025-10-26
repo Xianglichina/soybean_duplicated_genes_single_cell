@@ -14,12 +14,12 @@ later steps followed the divergence gene pair expression pattern, but used the g
 (until calculating fold change and determining the expression types)
 ############################################################################################################################################### 
 
-
-
-
-
-
 ### updated steps after calculating fold change and determing the expression types 
+#1. calculate expression fold change
+#script: calculate_expression_fold_change.Rmd
+
+#2. characterize gene set expression 
+#script: 0902_characterization_gene_set_expression_within_tissue.Rmd
 
 Summarize the expression pattern within tissue
 #focus on the comparison between the recent and ancestral duplicated gene pairs 
