@@ -25,7 +25,7 @@ input2: 07042025_glyma_duplicated_pairs.csv (file containing all duplicated gene
 input3: 07102025_gene_neighbors.csv (reference regions for each duplicated gene, generated in the above step)
 
 #output_file
-07102025_acr_blast.tsv
+07142025_acr_blast.tsv
 
 #script:
 blast.2.py 
