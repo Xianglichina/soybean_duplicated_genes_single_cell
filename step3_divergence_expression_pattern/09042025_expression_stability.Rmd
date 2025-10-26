@@ -1,0 +1,189 @@
+---
+title: "expression_correlation"
+output: html_document
+date: "2025-07-03"
+---
+
+```{r setup, include=FALSE}
+# Load tidyverse if not already
+library(tidyverse)
+library(ggridges)
+library(ggplot2)
+library(patchwork)
+
+# Read data
+df <- read.csv("07152025_combined_expression_patterns.csv")  # replace with your filename
+
+# Define columns
+stage_cols <- c("expression_type_cotyledon", "expression_type_early_maturation",
+                "expression_type_globular", "expression_type_heart")
+tissue_cols <- c("expression_type_hypocotyl", "expression_type_root", "expression_type_early_nodule","expression_type_heart")
+
+pattern_map <- c(
+  "dosage_balance" = "correlated_expression",
+  "paralogue_dominance" = "correlated_expression",
+  "specialized" = "correlated_expression",
+  "diverged" = "uncorrelated_expression",
+  "others" = "uncorrelated_expression",
+  "mono_expressed" = "mono_expression",
+  "not_expressed" = "non_expression"
+)
+
+# Apply the pattern mapping
+df_simplified <- df %>%
+  mutate(across(all_of(c(stage_cols, tissue_cols)), ~ pattern_map[.]))
+
+# Calculate stability and core class on simplified patterns
+stability_scores <- df_simplified %>%
+  rowwise() %>%
+  mutate(
+    # Stage stability
+    Stage_Stability_Score = {
+      stage_vals <- c_across(all_of(stage_cols))
+      if (all(stage_vals == "non_expression")) {
+        1
+      } else if (any(stage_vals == "non_expression")) {
+        expressed <- stage_vals[stage_vals != "non_expression"]
+        if (length(expressed) <= 1) {
+          1
+        } else {
+          1 - (n_distinct(expressed) - 1)/(length(stage_cols) - 1)
+        }
+      } else {
+        1 - (n_distinct(stage_vals) - 1)/(length(stage_cols) - 1)
+      }
+    },
+
+    Core_Pattern_Stage = {
+      stage_vals <- c_across(all_of(stage_cols))
+      if (all(stage_vals == "non_expression")) {
+        "non_expression"
+      } else if (any(stage_vals == "non_expression")) {
+        expressed <- stage_vals[stage_vals != "non_expression"]
+        tbl <- table(expressed)
+        if (length(tbl) == 1) {
+          names(tbl)[1]
+        } else {
+          names(sort(tbl, decreasing = TRUE))[1]
+        }
+      } else {
+        tbl <- table(stage_vals)
+        core <- names(which.max(tbl))
+        if (tbl[[core]] >= 2) core else NA_character_
+      }
+    },
+
+    # New: Second most common pattern for Stage
+    Second_Pattern_Stage = {
+      stage_vals <- c_across(all_of(stage_cols))
+      expressed <- stage_vals[stage_vals != "non_expression"]
+      tbl <- table(expressed)
+      sorted <- sort(tbl, decreasing = TRUE)
+      if (length(sorted) >= 2) names(sorted)[2] else NA_character_
+    },
+
+    # Tissue stability
+    Tissue_Stability_Score = {
+      tissue_vals <- c_across(all_of(tissue_cols))
+      if (all(tissue_vals == "non_expression")) {
+        1
+      } else if (any(tissue_vals == "non_expression")) {
+        expressed <- tissue_vals[tissue_vals != "non_expression"]
+        if (length(expressed) <= 1) {
+          1
+        } else {
+          1 - (n_distinct(expressed) - 1)/(length(tissue_cols) - 1)
+        }
+      } else {
+        1 - (n_distinct(tissue_vals) - 1)/(length(tissue_cols) - 1)
+      }
+    },
+
+    Core_Pattern_Tissue = {
+      tissue_vals <- c_across(all_of(tissue_cols))
+      if (all(tissue_vals == "non_expression")) {
+        "non_expression"
+      } else if (any(tissue_vals == "non_expression")) {
+        expressed <- tissue_vals[tissue_vals != "non_expression"]
+        tbl <- table(expressed)
+        if (length(tbl) == 1) {
+          names(tbl)[1]
+        } else {
+          names(sort(tbl, decreasing = TRUE))[1]
+        }
+      } else {
+        tbl <- table(tissue_vals)
+        core <- names(which.max(tbl))
+        if (tbl[[core]] >= 2) core else NA_character_
+      }
+    },
+
+    # New: Second most common pattern for Tissue
+    Second_Pattern_Tissue = {
+      tissue_vals <- c_across(all_of(tissue_cols))
+      expressed <- tissue_vals[tissue_vals != "non_expression"]
+      tbl <- table(expressed)
+      sorted <- sort(tbl, decreasing = TRUE)
+      if (length(sorted) >= 2) names(sorted)[2] else NA_character_
+    }
+  ) %>%
+  ungroup() %>%
+  select(Gene_Pair, Stage_Stability_Score, Tissue_Stability_Score,
+         Core_Pattern_Stage, Second_Pattern_Stage,
+         Core_Pattern_Tissue, Second_Pattern_Tissue)
+
+
+stability_scores_full <- stability_scores %>%
+  left_join(df, by = "Gene_Pair")
+
+# Stage Summary: Count and Mean Stage_Stability_Score
+stage_summary <- stability_scores %>%
+  group_by(Stage_Stability_Score) %>%
+  summarize(
+    Count = n(),
+    .groups = "drop"
+  ) %>%
+   mutate(Percentage = Count / sum(Count) * 100) %>%
+  arrange(desc(Count))
+
+# Tissue Summary: Count and Mean Tissue_Stability_Score
+tissue_summary <- stability_scores %>%
+  group_by(Tissue_Stability_Score) %>%
+  summarize(
+    Count = n(),
+    .groups = "drop"
+  ) %>%
+   mutate(Percentage = Count / sum(Count) * 100) %>%
+  arrange(desc(Count))
+
+stability_both <- stability_scores %>%
+  summarize(
+    Count = sum(Stage_Stability_Score == 1 & Tissue_Stability_Score == 1),
+    Percentage = Count / n() * 100
+  )
+
+core_stages_dup <- stability_scores_full %>%
+  group_by(Duplication_status.x, Stage_Stability_Score) %>%
+  summarise(count = n(), .groups = "drop") %>%  # define count
+  group_by(Duplication_status.x) %>%
+  mutate(percent = count / sum(count) * 100) %>%
+  ungroup()
+
+core_tissues_dup <- stability_scores_full %>%
+  group_by(Duplication_status.x, Tissue_Stability_Score) %>%
+  summarise(count = n(), .groups = "drop") %>%  # define count
+  group_by(Duplication_status.x) %>%
+  mutate(percent = count / sum(count) * 100) %>%
+  ungroup()
+
+write.csv(stability_scores_full, "09042025_stability_scores_full.csv")
+write.csv(stage_summary,"09042025_stage_summary.csv")
+write.csv(tissue_summary,"09042025_tissue_summary.csv")
+write.csv(core_stages_dup,"09042025_stage_dup_summary.csv")
+write.csv(core_tissues_dup,"09042025_tissue_dup_summary.csv")
+
+mean(stability_scores_full$Stage_Stability_Score)
+mean(stability_scores_full$Tissue_Stability_Score)
+```
+
+
