@@ -1,0 +1,31 @@
+---
+title: "tree_information_glyma"
+output: html_document
+date: "2025-06-30"
+---
+
+```{r load libraries}
+
+df<-read.csv("07162025_duplicated_gene_set_updated.csv")
+
+# Expand each row into 6 rows
+expanded <- do.call(rbind, apply(df, 1, function(row) {
+  fam <- row["fam"]
+  A1 <- row["geneA1_extracted"]
+  A2 <- row["geneA2_extracted"]
+  B1 <- row["geneB1_extracted"]
+  B2 <- row["geneB2_extracted"]
+  
+  data.frame(
+    fam = rep(fam, 6),
+    gene1 = c(A1, B1, A1, A1, A2, A2),
+    gene2 = c(A2, B2, B1, B2, B1, B2),
+    type  = c("recent_WGD", "recent_WGD", rep("ancient_WGD", 4)),
+    stringsAsFactors = FALSE
+  )
+}))
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
