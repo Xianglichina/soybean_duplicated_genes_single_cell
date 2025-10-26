@@ -1,5 +1,6 @@
+cell-type-specific expression 
 #input_files:
-Gm_atlas_globular_stage_seeds.rna_DAG_pseudobulk.txt (DE results from globular tissue)
+Gm_atlas_globular_stage_seeds.rna_DAG_pseudobulk.txt (DE results of expression)
 07162025_duplicated_gene_set_updated.csv (duplicated gene pairs information)
 08022025_globular_expression_type_final_all_summary_set.csv (expression pattern summary for gene sets) 
 
@@ -12,3 +13,19 @@ Gm_atlas_globular_stage_seeds.rna_DAG_pseudobulk.txt (DE results from globular t
 0908_summary_df_sig_classified_globular.csv
 
 0908_jaccard_clustering_heatmap_globular.pdf
+
+cell-type-specific ACRs
+#input_files:
+0710_matching_acr_count.tsv
+Gm_atlas_Globular_stage_seeds_atac_diffACR_pseudobulk.txt (DE results of ACRs)
+07102025_ACR2genes.csv
+0908_cotyledon_ct_gene_matrix.csv
+0908_blasted_acr_filter_globular_summary_updated.csv
+0908_summary_df_sig_classified_globular.csv
+
+#script:
+0908_ct_ACRs_globular.Rmd
+
+#output_files:
+0909_globular_final_result_clean.csv
+0908_globular_ctACR_pattern.pdf
