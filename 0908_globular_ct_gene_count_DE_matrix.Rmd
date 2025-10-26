@@ -1,0 +1,348 @@
+---
+title: "ct_genes"
+output: html_document
+date: "2024-10-06"
+---
+
+```{r load libraries}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ComplexHeatmap)
+library(factoextra)
+library(cluster)
+library(proxy)
+library(tibble)
+library(circlize)
+library(reshape2)
+library(grid)
+library(vegan)
+library(pheatmap)
+library(gridExtra)
+library(readr)
+```
+
+```{r globular_specific}
+#define the cell types that within each tissue
+globular_cell_types <- c("Em_innitials","Endosperm","SC_endothelium","SC_epidermis", "SC_hillum_parenchyma", "SC_hillum_vasculature", "SC_inner_integument" , "SC_parenchyma", "SC_phloem")
+
+#load the DE results from globular tissue
+sn_RNA_globular<-read.delim2("Gm_atlas_globular_stage_seeds.rna_DAG_pseudobulk.txt")
+sn_RNA_globular_filter<-sn_RNA_globular %>%
+  filter(cluster_id %in% globular_cell_types) %>%
+    mutate(
+    logFC = as.numeric(logFC), 
+    FDR = as.numeric(FDR),
+    sig_DE = ifelse(logFC > 1 & FDR < 0.05, 1, 0)
+    )
+
+unique(sn_RNA_globular_filter$cluster_id)
+
+# Filter sig_DE == 1 and mark 1 in a new column
+sig_clusters <- sn_RNA_globular_filter %>%
+  filter(sig_DE == 1, cluster_id %in% globular_cell_types) %>%
+  mutate(value = 1) %>%
+  select(geneID, cluster_id, value) %>%
+  pivot_wider(
+    names_from = cluster_id,
+    values_from = value,
+    values_fill = 0
+  )
+
+# Get total_DE per geneID
+total_DE_per_gene <- sn_RNA_globular_filter %>%
+  group_by(geneID) %>%
+  summarize(total_DE = sum(sig_DE == 1), .groups = "drop")
+
+# Join and ensure all columns are present
+sn_RNA_globular_DE <- total_DE_per_gene %>%
+  left_join(sig_clusters, by = "geneID") %>%
+  mutate(across(all_of(globular_cell_types), ~replace_na(.x, 0)))
+
+#define the cell-type-specific expression as long as the DE greater than 1
+globular_specific_genes<-sn_RNA_globular_DE %>%
+  filter(total_DE > 0) %>%
+  select(1:11)
+
+#filter the cell-type-specific genes with the consistent cell types across tissues
+globular_specific_genes_across <- globular_specific_genes %>%
+  select(
+    geneID, SC_endothelium, SC_epidermis, Endosperm, SC_parenchyma
+  ) %>%
+  filter(!if_all(c(SC_endothelium, SC_epidermis, Endosperm, SC_parenchyma), ~ .x == 0)) %>%
+  rename(
+    SC_endothelium_globular = SC_endothelium,
+    SC_epidermis_globular   = SC_epidermis,
+    Endosperm_globular      = Endosperm,
+    SC_parenchyma_globular  = SC_parenchyma
+  )
+
+write.csv(globular_specific_genes,"0908_globular_cell_type_specific_genes.csv")
+write.csv(globular_specific_genes_across, "0908_globular_specific_genes_across.csv")
+
+```
+
+```{r build matrix for clustering}
+###########################################################################################
+#filter the gene sets with four gene expressed and at least one of them is CT genes#
+###########################################################################################
+
+#load the gene set information 
+duplicated_gene_set<-read.csv( "07162025_duplicated_gene_set_updated.csv")
+
+#transform to long format and left_join with the expression and ct-expression pattern
+duplicated_gene_set_long <- duplicated_gene_set %>%
+  pivot_longer(cols = starts_with("gene"), names_to = "gene_type", values_to = "geneID") %>%
+  select(fam, geneID)%>%
+  left_join(globular_specific_genes, by = "geneID") 
+
+#load the expression patterns of gene set from previous studies 
+globular_duplicated_gene_set<-read.csv( "08022025_globular_expression_type_final_all_summary_set.csv")
+globular_duplicated_gene_set <- globular_duplicated_gene_set %>%
+  mutate(fam = fam.x) %>%
+  select(fam, set_expression)
+
+#summarize how many gene sets with at least one gene with CT expression and left join with the expression pattern of the set
+duplicated_gene_set_sum <- duplicated_gene_set_long %>%
+  group_by(fam) %>%
+  summarise(
+    total_DE_sum = sum(as.numeric(total_DE), na.rm = TRUE)
+  ) %>% 
+ left_join(globular_duplicated_gene_set, by= "fam")
+
+#filter the gene sets with four genes expressed and with at least one cell-type-specific genes 
+duplicated_gene_set_sum_filter <- duplicated_gene_set_sum %>%
+   filter(total_DE_sum > 0, set_expression == "four expressed")
+
+duplicated_gene_set_long_ct_analysis <- duplicated_gene_set_long[duplicated_gene_set_long$fam %in% duplicated_gene_set_sum_filter$fam,]
+
+#number of cell-type-specific genes with these gene sets
+sum(!is.na(duplicated_gene_set_long_ct_analysis[[3]]))
+
+#build matrix to do the clustering
+duplicated_gene_set_long_ct_analysis_matrix <-duplicated_gene_set_long_ct_analysis %>%
+  mutate(rowname = paste(fam, geneID, sep = "_"))
+
+rownames(duplicated_gene_set_long_ct_analysis_matrix) <- duplicated_gene_set_long_ct_analysis_matrix$rowname
+
+matrix_sig_numeric <- duplicated_gene_set_long_ct_analysis_matrix  %>%
+  select_if(is.numeric) %>%
+  select(2:10)
+
+rownames(matrix_sig_numeric)<- duplicated_gene_set_long_ct_analysis_matrix$rowname
+matrix_sig_numeric <- as.matrix(matrix_sig_numeric)
+matrix_sig_numeric[is.na(matrix_sig_numeric)] <- 0
+matrix_sig_numeric[is.nan(matrix_sig_numeric)] <- 0
+matrix_sig_numeric[is.infinite(matrix_sig_numeric)] <- 0
+
+write.csv(matrix_sig_numeric, "0908_globular_ct_gene_matrix.csv")
+```
+
+
+```{r jaccard}
+# Make sure it's a matrix
+mat <- as.matrix(matrix_sig_numeric)
+
+# Filter the rows with consistent values across columns
+mat_filtered <- mat[apply(mat, 1, sd, na.rm = TRUE) != 0, ]
+
+# Calculate Jaccard distance using vectorized approach
+jaccard_distance <- function(mat) {
+  # Convert to logical matrix for efficient computation
+  mat_logical <- mat == 1
+  
+  # Calculate intersection and union matrices
+  intersections <- tcrossprod(mat_logical)  # A %*% t(B) gives intersections
+  rowsums <- rowSums(mat_logical)
+  unions <- outer(rowsums, rowsums, "+") - intersections
+  
+  # Calculate Jaccard distances
+  jaccard_sim <- intersections / unions
+  jaccard_sim[is.nan(jaccard_sim)] <- 0  # Handle 0/0 cases
+  jaccard_dist <- 1 - jaccard_sim
+  
+  # Convert to distance object
+  return(as.dist(jaccard_dist))
+}
+
+# Calculate Jaccard distance matrix
+jaccard_distance_matrix <- jaccard_distance(mat_filtered)
+
+# Perform hierarchical clustering with Jaccard distance
+row_clust <- hclust(jaccard_distance_matrix, method = "ward.D2")
+
+
+# Load required libraries
+
+# Method 1: Elbow Method
+elbow_analysis <- function(distance_matrix, max_k = 20) {
+  wss <- numeric(max_k)
+  hc <- hclust(distance_matrix, method = "ward.D2")
+  
+  for (k in 1:max_k) {
+    clusters <- cutree(hc, k = k)
+    wss[k] <- sum(sapply(1:k, function(i) {
+      cluster_points <- which(clusters == i)
+      if (length(cluster_points) > 1) {
+        sum(as.matrix(distance_matrix)[cluster_points, cluster_points]) / (2 * length(cluster_points))
+      } else {
+        0
+      }
+    }))
+  }
+  
+  return(data.frame(k = 1:max_k, wss = wss))
+}
+
+# Method 2: Silhouette Analysis
+silhouette_analysis <- function(distance_matrix, max_k = 20) {
+  sil_width <- numeric(max_k - 1)
+  hc <- hclust(distance_matrix, method = "ward.D2")
+  
+  for (k in 2:max_k) {
+    clusters <- cutree(hc, k = k)
+    sil <- silhouette(clusters, distance_matrix)
+    sil_width[k-1] <- mean(sil[, 3])
+  }
+  
+  return(data.frame(k = 2:max_k, silhouette = sil_width))
+}
+
+# Calculate both methods
+#elbow_data <- elbow_analysis(jaccard_distance_matrix, max_k = 60)
+#sil_data <- silhouette_analysis(jaccard_distance_matrix, max_k = 60)
+
+# Create plots
+p_elbow <- ggplot(elbow_data, aes(x = k, y = wss)) +
+  geom_line(size = 1.2, color = "steelblue") +
+  geom_point(size = 3, color = "darkred") +
+  labs(title = "Elbow Method",
+       x = "Number of Clusters (k)",
+       y = "Within Sum of Squares") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold")) +
+  scale_x_continuous(breaks = seq(0, 30, 5))
+
+p_silhouette <- ggplot(sil_data, aes(x = k, y = silhouette)) +
+  geom_line(size = 1.2, color = "darkgreen") +
+  geom_point(size = 3, color = "orange") +
+  labs(title = "Silhouette Analysis",
+       x = "Number of Clusters (k)",
+       y = "Average Silhouette Width") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold")) +
+  scale_x_continuous(breaks = seq(0, 30, 5))
+
+# Combine plots
+combined_plot <- grid.arrange(p_elbow, p_silhouette, ncol = 2)
+
+# Find optimal k values
+optimal_elbow <- elbow_data$k[which.max(diff(diff(elbow_data$wss)))] + 1
+optimal_silhouette <- sil_data$k[which.max(sil_data$silhouette)]
+
+# Print results
+cat("Optimal k recommendations:\n")
+cat("Elbow Method:", optimal_elbow, "\n")
+cat("Silhouette Analysis:", optimal_silhouette, "\n")
+
+# Save plots
+ggsave("0908_optimal_k_analysis.pdf", plot = combined_plot, width = 12, height = 5, device = "pdf")
+
+# Optional: Create summary table
+summary_table <- data.frame(
+  Method = c("Elbow Method", "Silhouette Analysis"),
+  Optimal_k = c(optimal_elbow, optimal_silhouette),
+  Interpretation = c("Point of diminishing returns", "Maximum cluster quality")
+)
+
+print(summary_table)
+```
+
+```{r used the best k to conduct cluster}
+k <- 35  # or set to your preferred number like k <- 26
+
+# Cut the dendrogram to get clusters
+clusters <- cutree(row_clust, k = k)
+
+# Output the cluster assignments for each row/gene
+row_cluster_assignments <- data.frame(
+  Row = rownames(mat_filtered),
+  Cluster = clusters
+)
+
+# Combine with your existing data
+matrix_sig_cluster <- duplicated_gene_set_long_ct_analysis_matrix %>%
+  rename(Row = rowname) %>%
+  left_join(row_cluster_assignments, by = "Row")
+
+# Replace NAs with 0
+matrix_sig_cluster[is.na(matrix_sig_cluster)] <- 0
+
+summary_df_sig <- matrix_sig_cluster %>%
+  group_by(fam) %>%
+  summarise(
+    unique_clusters = n_distinct(Cluster[!is.na(Cluster) ]),
+    cluster_names = paste(sort(unique(Cluster[!is.na(Cluster) ])), collapse = ", "),
+    total_genes = n(),
+    clustered_genes = sum( !is.na(Cluster)),
+    cluster_counts = paste(
+      Cluster[!is.na(Cluster)] %>%
+        table() %>%
+        sort() %>%
+        paste0(names(.), ":", .),
+      collapse = "; "
+    ),
+    .groups = "drop"
+  )
+
+
+summary_df_sig_classified <- summary_df_sig %>%
+  rowwise() %>%
+  mutate(
+    # Extract only the counts after the ":" in cluster_counts
+    counts = list(as.integer(str_extract_all(cluster_counts, "(?<=:)\\d+")[[1]])),
+    counts_sorted = list(sort(unlist(counts), decreasing = TRUE)),
+    pattern = paste(counts_sorted, collapse = "+")
+  ) %>%
+  ungroup()
+
+dim(summary_df_sig_classified)
+
+
+write_csv(summary_df_sig_classified, "0908_summary_df_sig_classified_globular.csv")
+
+
+# Count how many families fall into each situation
+situation_counts <- summary_df_sig_classified %>%
+  group_by(pattern) %>%
+  count()
+
+
+
+write.csv(situation_counts, "0908_globular_summary_df_counts.csv")
+
+# Create annotation for rows (cluster info)
+row_anno <- data.frame(Cluster = factor(clusters))
+rownames(row_anno) <- names(clusters)
+
+# Generate heatmap with Jaccard distance
+heatmap<-pheatmap(
+  mat_filtered,
+  annotation_row = row_anno,
+  clustering_distance_rows = jaccard_distance_matrix,
+  clustering_method = "ward.D2",
+  scale = "none",  # Don't scale for binary data
+  show_rownames = FALSE,
+  show_colnames = TRUE,
+  color = colorRampPalette(c("white", "#2166AC"))(2),  # Simple black/white for binary
+  filename = "0908_jaccard_clustering_heatmap_globular.pdf",
+  width = 12,
+  height = 10
+)
+
+```
+
+
+
+
+
