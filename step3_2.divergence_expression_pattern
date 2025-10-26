@@ -61,14 +61,18 @@ write.csv(core_stages_dup,"08022025_stage_dup_summary.csv")
 write.csv(core_tissues_dup,"08022025_tissue_dup_summary.csv")
 
 #script:
-08052025_expression_stability.Rmd
+09042025_expression_stability.Rmd
 
 #across tissues and across stages
+
+# Read data
+df <- read.csv("07152025_combined_expression_patterns.csv")  # replace with your filename
+
+# Define columns
 stage_cols <- c("expression_type_cotyledon", "expression_type_early_maturation",
                 "expression_type_globular", "expression_type_heart")
 tissue_cols <- c("expression_type_hypocotyl", "expression_type_root", "expression_type_early_nodule","expression_type_heart")
 
-#consolidated expression patterns 
 pattern_map <- c(
   "dosage_balance" = "correlated_expression",
   "paralogue_dominance" = "correlated_expression",
@@ -78,7 +82,6 @@ pattern_map <- c(
   "mono_expressed" = "mono_expression",
   "not_expressed" = "non_expression"
 )
-
 
 
 
