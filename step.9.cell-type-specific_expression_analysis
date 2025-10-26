@@ -1,0 +1,14 @@
+#input_files:
+Gm_atlas_globular_stage_seeds.rna_DAG_pseudobulk.txt (DE results from globular tissue)
+07162025_duplicated_gene_set_updated.csv (duplicated gene pairs information)
+08022025_globular_expression_type_final_all_summary_set.csv (expression pattern summary for gene sets) 
+
+#script:
+0908_globular_ct_gene_count_DE_matrix.Rmd
+
+#output_files:
+0908_globular_cell_type_specific_genes.csv
+0908_globular_specific_genes_across.csv (for later cross tissue-types study)
+0908_summary_df_sig_classified_globular.csv
+
+0908_jaccard_clustering_heatmap_globular.pdf
