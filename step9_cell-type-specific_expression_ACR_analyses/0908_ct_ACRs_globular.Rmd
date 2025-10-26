@@ -1,0 +1,218 @@
+---
+title: "DE analysis"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+#load the libraries
+library("tidyverse")
+library("ggplot2")
+library("edgeR")
+```
+
+```{r select the ACRs in globular}
+#load the ACR count data matching the gene expression cell types and normalize them 
+acr_matching_rna_raw_count<-read.delim2("0710_matching_acr_count.tsv")
+
+acr_matching_rna_raw_count<-acr_matching_rna_raw_count[,1:58]
+
+#normalize the count of ACRs 
+acr_matching_rna_normalized<-cpm(acr_matching_rna_raw_count)
+acr_matching_rna_normalized<-as.data.frame(acr_matching_rna_normalized)
+
+#select the ACRs that in globular and ensure the count of ACR in at least one cell type greater than 4
+globular <- acr_matching_rna_normalized %>%
+  select(starts_with("Gm_atlas_globular")) 
+
+acr_matching_rna_normalized_globular <- globular %>%
+  mutate(Count_Greater_Than_4 = rowSums(globular > 4, na.rm = TRUE)) %>%
+  filter(Count_Greater_Than_4 > 0 ) 
+
+#add ACR name and ACR tissue, this is all the ACRs in globular tissue 
+acr_matching_rna_normalized_globular <- acr_matching_rna_normalized_globular %>%
+  mutate(ACR_tissue = "globular") %>%
+  mutate(ACR_name = rownames(acr_matching_rna_normalized_globular)) %>%
+  select(ACR_tissue, ACR_name)
+
+#write.csv(acr_matching_rna_normalized_globular, "acr_matching_rna_normalized_globular.csv")
+```
+
+```{r ct ACR in globular}
+ct_acr_globular<-read.delim2("Gm_atlas_Globular_stage_seeds_atac_diffACR_pseudobulk.txt")
+
+#define the cell types that with the data
+globular_cell_types <-c("Em_innitials","Endosperm","SC_endothelium","SC_epidermis", "SC_hillum_parenchyma", "SC_hillum_vasculature", "SC_inner_integument" , "SC_parenchyma", "SC_phloem")
+
+#load the DE results from globular tissue
+ct_acr_globular_filter<-ct_acr_globular %>%
+  filter(cluster_id %in% globular_cell_types) %>%
+    mutate(
+    logFC = as.numeric(logFC), 
+    FDR = as.numeric(FDR),
+    sig_DE = ifelse(logFC > 1 & FDR < 0.05, 1, 0)
+    )
+
+# Filter sig_DE == 1 and mark 1 in a new column
+sig_clusters <- ct_acr_globular_filter %>%
+  filter(sig_DE == 1, cluster_id %in% globular_cell_types) %>%
+  mutate(value = 1) %>%
+  select(geneID, cluster_id, value) %>%
+  pivot_wider(
+    names_from = cluster_id,
+    values_from = value,
+    values_fill = 0
+  )
+
+# Get total_DE per geneID
+total_DE_per_ACR <- ct_acr_globular_filter %>%
+  group_by(geneID) %>%
+  summarize(total_DE = sum(sig_DE == 1), .groups = "drop")
+
+ACR2gene<-read.csv("07102025_ACR2genes.csv")
+ACR2gene<-ACR2gene %>%
+  select(ACR, gene)
+
+ct_acr_globular_final <- total_DE_per_ACR %>%
+  left_join(sig_clusters, by = "geneID") %>%
+  mutate(across(all_of(globular_cell_types), ~replace_na(.x, 0))) %>%
+  filter(total_DE >0) %>%
+  rename(ACR = geneID) %>%
+  left_join(ACR2gene, by ="ACR")
+
+
+#write.csv(ct_acr_globular_final, "08012025_ct_acr_globular_final.csv")
+```
+
+```{r summarize all information together}
+# Load necessary libraries
+library(dplyr)
+
+# Rename column in ct_acr_globular_final
+ct_acr_globular_final <- ct_acr_globular_final %>% rename(geneID = gene)
+
+# Define tissue columns (adjust this if the order/column names differ)
+tissue_cols <- c("Em_innitials","Endosperm","SC_endothelium","SC_epidermis", "SC_hillum_parenchyma", "SC_hillum_vasculature", "SC_inner_integument" , "SC_parenchyma", "SC_phloem")
+
+# Initialize list to store results
+result_list <- list()
+matrix_DE_cluster<-read.csv("0908_globular_ct_gene_matrix.csv")
+
+
+matrix_DE_cluster <- matrix_DE_cluster %>%
+  separate(X, into = c("fam", "geneID"), sep = "_")
+
+# Loop through each row in matrix_DE_cluster
+for (i in 1:nrow(matrix_DE_cluster)) {
+  row_data <- matrix_DE_cluster[i, ]
+  gene_id <- row_data$geneID
+
+  # Skip if geneID is NA
+  if (is.na(gene_id)) next
+
+  # Identify tissue columns where the value is 1
+  active_tissues <- tissue_cols[which(row_data[ , tissue_cols] == 1)]
+
+  if (length(active_tissues) == 0) next
+
+  # Filter ct_acr_globular_final for matching geneID
+  matching_gene_rows <- ct_acr_globular_final %>%
+    filter(geneID == !!gene_id)
+
+  # From those, keep rows where any of the tissue columns of interest has a value of 1
+  matches <- matching_gene_rows %>%
+    filter(if_any(all_of(active_tissues), ~ . == 1))
+
+  if (nrow(matches) > 0) {
+    matches$source_geneID <- gene_id
+    matches$row_in_matrix_DE_cluster <- i
+    result_list[[length(result_list) + 1]] <- matches
+  }
+}
+
+# Combine into one data frame
+final_result <- bind_rows(result_list)
+
+# Save or inspect
+# write_tsv(final_result, "matched_ACRs.tsv")
+final_result
+
+
+length(unique(final_result$geneID))
+```
+
+```{r further examination of ACRs}
+globular_acr_summary<-read.csv("0908_blasted_acr_filter_globular_summary_updated.csv")
+
+
+fam_classification<-read.csv("0908_summary_df_sig_classified_globular.csv")
+fam_classification <-fam_classification %>%
+  select(fam,pattern)
+
+situation_counts <- fam_classification %>%
+  group_by(pattern) %>%
+  count()
+
+
+final_result<-final_result %>%
+  mutate(ACR_name = ACR) %>%
+  left_join(globular_acr_summary, by = "ACR_name") %>%
+  left_join(fam_classification, by= "fam")
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+# 1. Calculate counts per fam and ACR_conservation_score
+ratio_df <- final_result%>%
+  group_by(fam, ACR_conservation_score) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(fam) %>%
+  mutate(ratio = count / sum(count)) %>%
+  ungroup()
+
+# 2. Add pattern info by joining back the pattern column
+ratio_df <- ratio_df %>%
+  left_join(final_result %>%
+              select(fam, pattern) %>% distinct(),
+            by = "fam")
+
+# 3. Transform data to long format for plotting (optional if needed)
+ratio_long <- ratio_df
+
+# 4. Plot the distributions of the ratios for each type
+
+ratio_long<-na.omit(ratio_long)
+
+p_pattern<-ggplot(ratio_long, aes(x = ACR_conservation_score, y = ratio, fill = ACR_conservation_score)) +
+  # Violin plot
+  geom_violin(trim = FALSE, color = NA, alpha = 0.6) +
+  # Boxplot on top of violin
+  geom_boxplot(width = 0.1, outlier.shape = NA, color = "black", fill = "white", size = 0.3) +
+  # Facet by pattern
+  facet_wrap(~pattern) +
+  # Custom fill colors
+  scale_fill_manual(values = c("exclusively conserved" = "#518463",
+                               "fully conserved" = "#254750",
+                               "unique" =  "#D2F1DC")) +
+  # Labels
+  labs(x = "ACR Conservation Score", y = "Ratio per Fam", 
+       title = "Distribution of ACR Conservation Ratios by Pattern", fill = "ACR Type") +
+  # Theme
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "top")
+
+# Save plots
+ggsave("0908_globular_ctACR_pattern.pdf", plot = p_pattern, width = 12, height = 5, device = "pdf")
+
+
+#fine tune the results 
+globular_final_result_clean<-final_result[,c(1,3:11,12,17,23,25)]
+write.csv(globular_final_result_clean, "0909_globular_final_result_clean.csv")
+```
+
+
+
+
+
