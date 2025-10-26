@@ -28,4 +28,22 @@ python blast_extract_bed_files_0113.py 07182025_combined_blast_output.txt 071020
 #output_file:
 07222025_blasted_acr_filter_cotyledon_summary_avg.csv
 
+###step3. analyze the dynamics of ACRs associated with expression patterns across tissues.
+#input_files:
+0710_matching_acr_count.tsv
+07042025_glyma_duplicated_pairs.csv
+07102025_ACR2genes.csv
+09042025_stability_scores_full.csv
+
+#scripts:
+0904_updated_ACRs_across_tissue.v3.Rmd
+0904_updated_ACRs_across_stages.v3.Rmd
+
+#output_files:
+09042025_acr_variability_results_simplified_stage.csv
+09042025_acr_variability_with_stability_stage.csv
+09042025_summary_by_stage_stability.csv
+
+
+
 
