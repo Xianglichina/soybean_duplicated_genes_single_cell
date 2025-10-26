@@ -1,0 +1,17 @@
+# Snakefile
+
+# Load the YAML configuration
+configfile: "config.yaml"
+
+rule all:
+    input:
+        config["output_file"]  # Use the output file from config.yaml
+
+rule extract_coordinates:
+    input:
+        config["input_file"]  # Use the input file from config.yaml
+    output:
+        config["output_file"]  # Use the output file from config.yaml
+    script:
+        config["script"]  # Use the script path from config.yaml
+

@@ -1,0 +1,6 @@
+# config.yaml
+
+input_file: "07102025_acr_blast.tsv"
+output_file: "07102025_reference_regions.tsv"
+script: "extract_coords.py"
+
