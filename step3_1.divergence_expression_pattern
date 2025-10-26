@@ -90,17 +90,3 @@ write.csv(globular_filter_one_expression_expressed, "globular_filter_one_express
 #output files:
 write.csv(combined_expression_patterns, "07152025_combined_expression_patterns.csv")
 write.csv(summary_df, "07152025_gene_expression_type_across_tissues_summary.csv")
-
-
-###################################################################################################
-delete the things below 
-########## divergent gene expression analysis across tissues ##########
-#load the combined expression patterns across tissue for each gene pair
-#calculate the expression stability across stages or across tissues 
-
-#input_file: 07152025_combined_expression_patterns.csv
-
-#script:09042025_expression_stability.Rmd
-
-
-
