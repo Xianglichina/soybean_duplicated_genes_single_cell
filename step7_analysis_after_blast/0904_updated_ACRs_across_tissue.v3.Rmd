@@ -1,0 +1,281 @@
+---
+title: "ACR Variability Analysis - Jaccard Distance  Methods"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# ACR Variability Analysis
+
+This analysis examines the variability of Accessible Chromatin Regions (ACRs) across different tissues for gene pairs, focusing on two key metrics:
+
+1. **Jaccard Variability**: Measures how different the sets of ACRs are between tissues (0 = identical sets, 1 = completely different sets)
+
+```{r load_libraries_and_data}
+# Load required libraries
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(ggplot2)
+library(edgeR)
+library(RColorBrewer)
+library(gridExtra)
+library(corrplot)
+
+# Load and prepare data
+acr_matching_rna_raw_count <- read.delim2("0710_matching_acr_count.tsv")
+acr_matching_rna_raw_count <- acr_matching_rna_raw_count[,1:58]
+acr_matching_rna_normalized <- cpm(acr_matching_rna_raw_count)
+acr_matching_rna_normalized <- as.data.frame(acr_matching_rna_normalized)
+
+gene_pair <- read.csv("07042025_glyma_duplicated_pairs.csv")
+acr_2gene <- read.csv("07102025_ACR2genes.csv", header=FALSE)
+colnames(acr_2gene) <- c("ACR_name","gene")
+
+cat("Data loaded successfully!\n")
+cat("Number of ACRs:", nrow(acr_matching_rna_normalized), "\n")
+cat("Number of gene pairs:", nrow(gene_pair), "\n")
+cat("Number of ACR-gene mappings:", nrow(acr_2gene), "\n")
+```
+
+```{r extract_tissue_acrs}
+# Function to extract ACRs for a specific tissue
+# This identifies ACRs that are active (count > 4) in at least one cell type within the tissue
+extract_tissue_acrs <- function(normalized_data, tissue_name) {
+  cat("Processing tissue:", tissue_name, "\n")
+  
+  # Select columns for the specific tissue
+  tissue_cols <- normalized_data %>%
+    select(starts_with(paste0("Gm_atlas_", tissue_name)))
+  
+  # Filter ACRs with count > 4 in at least one cell type
+  tissue_acrs <- tissue_cols %>%
+    mutate(Count_Greater_Than_4 = rowSums(tissue_cols > 4, na.rm = TRUE)) %>%
+    filter(Count_Greater_Than_4 > 0) %>%
+    mutate(ACR_tissue = tolower(tissue_name),
+           ACR_name = rownames(.)) %>%
+    select(ACR_tissue, ACR_name)
+  
+  cat("  Found", nrow(tissue_acrs), "active ACRs\n")
+  return(tissue_acrs)
+}
+
+# Extract ACRs for each tissue
+heart_acrs <- extract_tissue_acrs(acr_matching_rna_normalized, "Heart")
+early_nodule_acrs <- extract_tissue_acrs(acr_matching_rna_normalized, "Early_nodule")
+root_acrs <- extract_tissue_acrs(acr_matching_rna_normalized, "Root")
+hypocotyl_acrs <- extract_tissue_acrs(acr_matching_rna_normalized, "Hypocotyl")
+```
+
+```{r prepare_gene_pairs_and_mapping}
+# Prepare gene pair data with unique identifiers
+gene_pair <- gene_pair %>%
+  mutate(pair_id = paste0("pair_", row_number()),
+         combined = paste(duplicate_1, duplicate_2, sep = "_"))
+
+# Convert to long format for easier processing
+long_gene_pair <- gene_pair %>%
+  select(pair_id, duplicate_1, duplicate_2, duplication_status, combined) %>%
+  pivot_longer(cols = starts_with("duplicate"),
+               names_to = "duplicate_type",
+               values_to = "gene") %>%
+  select(pair_id, gene, duplication_status, combined)
+
+# Function to connect ACRs with gene pairs for each tissue
+connect_acrs_genepairs <- function(tissue_acrs, tissue_name) {
+  cat("Connecting ACRs to gene pairs for", tissue_name, "\n")
+  
+  # Join tissue ACRs with gene mappings
+  tissue_acrs_with_genes <- tissue_acrs %>%
+    left_join(acr_2gene, by = "ACR_name")
+  
+  # Join with gene pairs and filter for matches
+  long_gene_pair_tissue <- long_gene_pair %>%
+    left_join(tissue_acrs_with_genes, by = "gene") %>%
+    filter(!is.na(ACR_name))  # Keep only rows with ACR matches
+  
+  cat("  Found", nrow(long_gene_pair_tissue), "ACR-gene pair connections\n")
+  return(long_gene_pair_tissue)
+}
+
+# Connect ACRs with gene pairs for each tissue
+long_gene_pair_heart <- connect_acrs_genepairs(heart_acrs, "heart")
+long_gene_pair_early_nodule <- connect_acrs_genepairs(early_nodule_acrs, "early_nodule")
+long_gene_pair_root <- connect_acrs_genepairs(root_acrs, "root")
+long_gene_pair_hypocotyl <- connect_acrs_genepairs(hypocotyl_acrs, "hypocotyl")
+
+# Combine all tissues into one dataframe
+all_tissues_acrs <- bind_rows(
+  long_gene_pair_heart,
+  long_gene_pair_early_nodule,
+  long_gene_pair_root,
+  long_gene_pair_hypocotyl
+)
+
+# Create variability input format
+variability_input <- all_tissues_acrs %>%
+  group_by(pair_id, ACR_tissue) %>%
+  summarise(
+    ACRs = paste(unique(ACR_name), collapse = ","),
+    .groups = 'drop'
+  ) %>%
+  rename(gene_pair = pair_id, tissue = ACR_tissue) %>%
+  filter(ACRs != "")  # Remove empty ACR sets
+
+cat("\nData preparation complete!\n")
+cat("Gene pairs with ACR data:", length(unique(variability_input$gene_pair)), "\n")
+cat("Tissues analyzed:", length(unique(variability_input$tissue)), "\n")
+```
+
+```{r calculate_variability_metrics}
+# Function to calculate Jaccard Distance variability
+calculate_acr_variability <- function(data) {
+  cat("Calculating variability metrics...\n")
+  
+  # Clean the data
+  data_clean <- data %>%
+    filter(!is.na(gene_pair), !is.na(tissue), !is.na(ACRs)) %>%
+    filter(ACRs != "", gene_pair != "", tissue != "") %>%
+    mutate(
+      ACRs = trimws(ACRs),
+      gene_pair = trimws(gene_pair),
+      tissue = trimws(tissue)
+    )
+  
+  cat("Processing", length(unique(data_clean$gene_pair)), "gene pairs\n")
+  
+  # Method 1: Jaccard Distance (measures dissimilarity between ACR sets across tissues)
+  # Jaccard Distance = 1 - (Intersection / Union)
+  # 0 = identical sets, 1 = completely different sets, NA = cannot compare
+  jaccard_variability <- data_clean %>%
+    mutate(ACR_list = map(strsplit(ACRs, ","), ~ trimws(.x))) %>%
+    group_by(gene_pair) %>%
+    summarise(
+      jaccard_variability = {
+        acr_sets <- ACR_list
+        n_tissues <- length(acr_sets)
+        
+        if(n_tissues < 2) {
+          NA_real_  # Cannot calculate variability with less than 2 tissues
+        } else {
+          # Calculate pairwise Jaccard distances between all tissue combinations
+          jaccard_distances <- c()
+          for(i in 1:(n_tissues-1)) {
+            for(j in (i+1):n_tissues) {
+              set1 <- acr_sets[[i]][acr_sets[[i]] != ""]
+              set2 <- acr_sets[[j]][acr_sets[[j]] != ""]
+              
+              if(length(set1) == 0 && length(set2) == 0) {
+                jaccard_dist <- NA_real_  # Cannot compare two empty sets
+              } else if(length(set1) == 0 || length(set2) == 0) {
+                jaccard_dist <- 1  # One empty, one non-empty = completely different
+              } else {
+                intersection <- length(intersect(set1, set2))
+                union <- length(union(set1, set2))
+                jaccard_dist <- 1 - (intersection / union)  # 0 when identical, 1 when no overlap
+              }
+              jaccard_distances <- c(jaccard_distances, jaccard_dist)
+            }
+          }
+          # Return mean Jaccard distance across all tissue pairs (excluding NAs)
+          if(length(jaccard_distances) == 0 || all(is.na(jaccard_distances))) {
+            NA_real_
+          } else {
+            mean(jaccard_distances, na.rm = TRUE)
+          }
+        }
+      },
+      n_tissues = n(),
+      .groups = 'drop'
+    )
+
+}
+
+# Calculate variability metrics
+variability_results <- calculate_acr_variability(variability_input)
+
+# Display basic statistics
+cat("ACR Variability Results Summary:\n")
+cat("Number of gene pairs analyzed:", nrow(variability_results), "\n")
+cat("Mean Jaccard variability:", round(mean(variability_results$jaccard_variability, na.rm = TRUE), 3), "\n")
+```
+
+
+
+```{r integrate_stability_scores}
+# Load and integrate stability scores
+stability <- read.csv("09042025_stability_scores_full.csv")
+
+# Process stability data to match with gene pairs
+stability_new <- stability %>%
+  mutate(combined = gsub(" vs ", "_", Gene_Pair)) %>%
+  left_join(gene_pair, by = "combined") %>%
+  select(Gene_Pair,Stage_Stability_Score, Tissue_Stability_Score, Core_Pattern_Stage, Second_Pattern_Stage, Core_Pattern_Tissue, Second_Pattern_Tissue, pair_id) %>%
+  mutate(gene_pair = pair_id) %>%
+  filter(!is.na(gene_pair))  # Remove rows without matching gene pairs
+
+cat("Stability data integration:\n")
+cat("Original stability records:", nrow(stability), "\n")
+cat("Matched with gene pairs:", nrow(stability_new), "\n")
+
+# Merge variability results with stability scores
+variability_with_stability <- variability_results %>%
+  left_join(stability_new, by = "gene_pair") %>%
+  filter(!is.na(Tissue_Stability_Score))  # Keep only gene pairs with stability data
+
+cat("Gene pairs with both variability and stability data:", nrow(variability_with_stability), "\n")
+
+# Create summary statistics grouped by stability characteristics
+summary_by_tissue_stability <- variability_with_stability %>%
+  group_by(Tissue_Stability_Score) %>%
+  summarize(
+    n_gene_pairs = n(),
+    mean_jaccard_variability = mean(jaccard_variability, na.rm = TRUE),
+    sd_jaccard_variability = sd(jaccard_variability, na.rm = TRUE),
+    .groups = "drop"
+  ) 
+
+ggplot(variability_with_stability, aes(x = factor(Tissue_Stability_Score), y = jaccard_variability)) +
+  geom_violin(fill = "#69b3a2", alpha = 0.6, color = "black", trim = FALSE) +  # violin shape
+  geom_boxplot(width = 0.1, outlier.shape = NA, fill = "white", color = "black") + # boxplot inside
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "red") + # mean as red dot
+  labs(
+    x = "Tissue Stability Score",
+    y = "Jaccard Variability",
+    title = "Distribution of Jaccard Variability by Tissue Stability Score"
+  ) +
+  theme_minimal(base_size = 14)
+
+cat("\nSummary by Tissue Stability:\n")
+print(summary_by_tissue_stability)
+```
+
+
+
+```{r save_stability_results}
+# Save results to CSV files
+write.csv(variability_results, "09042025_aacr_variability_results_simplified_tissue.csv", row.names = FALSE)
+write.csv(variability_with_stability, "09042025_aacr_variability_with_stability_tissue.csv", row.names = FALSE)
+write.csv(summary_by_tissue_stability, "09042025_asummary_by_tissue_stability.csv", row.names = FALSE)
+
+cat("\nResults saved to CSV files:\n")
+cat("- acr_variability_with_stability.csv: Combined variability and stability data\n")
+cat("- summary_by_tissue_stability.csv: Summary statistics by tissue stability groups\n")
+
+cat("\n=== TISSUE-VARIABILITY ANALYSIS COMPLETE ===\n")
+cat("This analysis explores the relationship between ACR variability and gene expression stability across tissues.\n")
+cat("Use the group comparisons to understand how regulatory variability relates to expression stability.\n")
+```
+
+```{r interpretation_guide}
+cat("\n=== INTERPRETATION GUIDE ===\n\n")
+cat("JACCARD VARIABILITY:\n")
+cat("- Range: 0 to 1\n")
+cat("- 0 = Identical ACR sets across all tissues\n")
+cat("- 1 = Completely different ACR sets between tissues\n")
+cat("- Interpretation: Higher values indicate more tissue-specific ACR usage\n\n")
+
+```
